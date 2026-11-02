@@ -293,11 +293,13 @@
     function paywall() {
       const l = L || {};
       const pl = l.plans || {};
-      const p1 = pl.monthly || { label: 'Bulanan', price: 25000, days: 30 }, p2 = pl.lifetime || { label: 'Lifetime', price: 200000 };
+      const p1 = pl.monthly || { label: 'Bulanan', price: 24000, original: 49000, days: 30 }, p2 = pl.yearly || { label: 'Tahunan', price: 249000, original: 549000, days: 365 };
+      const off = (p) => (p.original > p.price ? Math.round((1 - p.price / p.original) * 100) : 0);
+      const was = (p) => (p.original > p.price ? `<s style="opacity:.55;font-size:12px">${full(p.original)}</s> ` : '');
       const dis = lbusy ? 'disabled' : '';
       const err = lerr ? `<div class="err">${esc(lerr)}</div>` : '';
       if (l.state === 'signedout') {
-        return `<div class="pw"><h3>Mulai trial gratis 7 hari</h3><p>Masuk dengan Google untuk mengaktifkan Spill Data. Tanpa kartu kredit.</p>
+        return `<div class="pw"><h3>Mulai trial gratis 3 hari</h3><p>Masuk dengan Google untuk mengaktifkan Spill Data. Tanpa kartu kredit.</p>
           <button class="gbtn" data-lic="login" ${dis}>${GICON} ${esc(lbusy || 'Masuk dengan Google')}</button>${err}</div>`;
       }
       if (l.state === 'offline' || l.state === 'invalid') {
@@ -307,11 +309,11 @@
       const head = l.state === 'expired' ? '<h3>Masa aktif berakhir</h3><p>Pilih paket untuk melanjutkan riset produk &amp; toko.</p>'
         : '<h3>Pilih paket</h3><p>Upgrade kapan saja — sisa masa aktif Anda tidak hangus.</p>';
       const wait = l.pending ? '<div class="wait">⏳ Menunggu pembayaran… akses aktif otomatis setelah bayar. <a data-lic="refresh">Sudah bayar? Cek status</a></div>' : '';
-      const lifeBox = l.state === 'lifetime' ? '' : `<div class="pl hot"><small>${esc(p2.label)}</small><b>${full(p2.price)}</b><small>sekali bayar</small>
-          <ul><li>Semua fitur selamanya</li><li>Gratis update aplikasi</li></ul><button class="btn" data-lic="checkout" data-plan="lifetime" ${dis}>${esc(lbusy || 'Pilih Lifetime')}</button></div>`;
+      const yearBox = `<div class="pl hot"><small>${esc(p2.label)}${off(p2) ? ' · hemat ' + off(p2) + '%' : ''}</small><div>${was(p2)}</div><b>${full(p2.price)}</b><small>per tahun</small>
+          <ul><li>Semua fitur</li><li>Paling hemat</li></ul><button class="btn" data-lic="checkout" data-plan="yearly" ${dis}>${esc(lbusy || 'Pilih Tahunan')}</button></div>`;
       return `<div class="pw">${head}<div class="plans">
-        <div class="pl"><small>${esc(p1.label)}</small><b>${full(p1.price)}</b><small>per ${p1.days} hari</small>
-          <ul><li>Semua fitur</li><li>Perpanjang kapan saja</li></ul><button class="btn" data-lic="checkout" data-plan="monthly" ${dis}>${esc(lbusy || 'Pilih Bulanan')}</button></div>${lifeBox}</div>
+        <div class="pl"><small>${esc(p1.label)}${off(p1) ? ' · hemat ' + off(p1) + '%' : ''}</small><div>${was(p1)}</div><b>${full(p1.price)}</b><small>per ${p1.days} hari</small>
+          <ul><li>Semua fitur</li><li>Perpanjang kapan saja</li></ul><button class="btn" data-lic="checkout" data-plan="monthly" ${dis}>${esc(lbusy || 'Pilih Bulanan')}</button></div>${yearBox}</div>
         ${wait}${err}<div class="meta">${esc(l.email || '')}<a data-lic="logout">Keluar</a></div></div>`;
     }
 

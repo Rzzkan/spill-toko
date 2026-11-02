@@ -303,7 +303,7 @@
         el.hidden = false;
         const btn = (a, t, pri) => `<button class="${pri ? 'pri' : ''}" data-l="${a}">${t}</button>`;
         let t = '', b = '';
-        if (L.state === 'signedout') { t = 'Belum masuk — trial 7 hari gratis'; b = btn('login', 'Masuk dengan Google', 1); }
+        if (L.state === 'signedout') { t = 'Belum masuk — trial 3 hari gratis'; b = btn('login', 'Masuk dengan Google', 1); }
         else if (L.state === 'trial') { t = `Trial · ${L.daysLeft} hari lagi`; b = btn('plans', 'Upgrade', 1) + btn('logout', 'Keluar'); }
         else if (L.state === 'active') { t = `Aktif · ${L.daysLeft} hari lagi`; b = btn('plans', 'Perpanjang') + btn('logout', 'Keluar'); }
         else if (L.state === 'lifetime') { t = 'Lifetime ★'; b = btn('logout', 'Keluar'); }

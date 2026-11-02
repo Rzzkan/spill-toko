@@ -11,7 +11,7 @@ Semua data tersimpan lokal di browser (`chrome.storage.local`).
 4. Buka shopee.co.id (login dulu), klik ikon extension atau tab oranye **SPILL TOKO** di tepi kanan layar
 
 ## Lisensi (SaaS)
-Extension memakai langganan: login Google → trial 7 hari → Bulanan Rp25.000/30 hari atau Lifetime Rp200.000. Backend Laravel + panel admin TailAdmin (Google, Midtrans, kenari.id diatur dari dashboard) ada di repo `spill-toko-server` (lihat README di sana). Isi `src/config.js` (`API_BASE`, `GOOGLE_CLIENT_ID`, `LICENSE_PUBKEY`) untuk mengaktifkan; selama kosong, lisensi nonaktif dan semua fitur terbuka. Field `key` di `manifest.json` hanya untuk ID extension yang stabil saat pengembangan — hapus sebelum upload ke Chrome Web Store.
+Extension memakai langganan: login Google → trial 3 hari → Bulanan Rp24.000/30 hari (coret Rp49.000) atau Tahunan Rp249.000 (coret Rp549.000). Backend Laravel + panel admin TailAdmin (Google, Midtrans, kenari.id diatur dari dashboard) ada di repo `spill-toko-server` (lihat README di sana). Isi `src/config.js` (`API_BASE`, `GOOGLE_CLIENT_ID`, `LICENSE_PUBKEY`) untuk mengaktifkan; selama kosong, lisensi nonaktif dan semua fitur terbuka. Field `key` di `manifest.json` hanya untuk ID extension yang stabil saat pengembangan — hapus sebelum upload ke Chrome Web Store.
 
 ## Tampilan inline (seperti Tokpee Data)
 Kartu **Spill Data** tertanam langsung di halaman Shopee:

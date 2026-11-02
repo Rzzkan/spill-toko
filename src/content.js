@@ -31,7 +31,7 @@
 
   function guard() {
     if (lic.access) return true;
-    ui.setStatus('Fitur terkunci. Masuk dengan Google (trial 7 hari gratis) atau pilih paket.', 'err');
+    ui.setStatus('Fitur terkunci. Masuk dengan Google (trial 3 hari gratis) atau pilih paket.', 'err');
     return false;
   }
 
