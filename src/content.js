@@ -323,7 +323,7 @@
     if (!guard()) return 0;
     if (P.isBlockedPage(location)) { ui.setStatus('Shopee meminta verifikasi/login. Selesaikan dulu secara manual.', 'err'); return 0; }
     if (await useWindow()) {   // scan di jendela terpisah: halaman ini tidak bergulir/berpindah
-      setBusyAll(true, 'Memindai di jendela lain…');
+      setBusyAll(true, 'Memindai di tab latar belakang…');
       await startJob({ total: 1, openModal: !!(opts && opts.openModal) }, null);
       return 0;
     }
@@ -352,8 +352,8 @@
       // Scan berjalan di jendela popup terpisah; halaman ini tidak berpindah/bergulir.
       await S.setJob(Object.assign({}, base, { mode: 'window', returnUrl: null }));
       const r = await send({ type: 'spill-open-runner', url: url || location.href, screen: { w: screen.availWidth, h: screen.availHeight } });
-      if (r && r.ok) { setBusyAll(true, 'Memindai di jendela lain…'); ui.setStatus('Scan berjalan di jendela terpisah (kanan bawah layar). Anda bisa tetap memakai halaman ini.'); return; }
-      ui.setStatus('Jendela scan gagal dibuka — memindai langsung di tab ini.', 'err');
+      if (r && r.ok) { setBusyAll(true, 'Memindai di tab latar belakang…'); ui.setStatus('Scan berjalan di tab latar belakang (otomatis menutup setelah selesai). Anda bisa tetap memakai halaman ini.'); return; }
+      ui.setStatus('Tab scan gagal dibuka — memindai langsung di tab ini.', 'err');
     }
     await S.setJob(base);
     sessionStorage.setItem('spill_owner', '1');
@@ -409,7 +409,12 @@
     setBusyAll(true, `Memindai ${job.done + 1}/${job.total}…`);
     ui.setStatus(`Halaman ${job.done + 1} dari ${job.total}… (jangan tutup ${inWin ? 'jendela ini' : 'tab'})`);
     let n = 0;
-    try { await waitForProducts(inWin ? 25000 : 8000); n = (await scanPage()).n; } catch (e) { ui.setStatus('Gagal: ' + e.message, 'err'); }
+    try {
+      let ok = await waitForProducts(inWin ? 20000 : 8000);
+      if (!ok && inWin) { send({ type: 'spill-show-runner' }); ok = await waitForProducts(20000); }   // tab latar belakang tak dirender Chrome -> tampilkan sebentar
+      n = (await scanPage()).n;
+      if (!n && inWin) { try { await chrome.storage.local.set({ last_diag: { at: Date.now(), d: P.diagnose(document) } }); } catch (_) { /* abaikan */ } }
+    } catch (e) { ui.setStatus('Gagal: ' + e.message, 'err'); }
     const fresh = await S.getJob();
     if (!fresh || !fresh.active) { setBusyAll(false); closeRunner(); return; }   // dihentikan dari halaman asal
     job.done++; job.found = (job.found || 0) + n;
@@ -560,7 +565,8 @@
 
   async function onDiag() {
     try {
-      const d = P.diagnose(document);
+      let d = P.diagnose(document);
+      try { const o = (await chrome.storage.local.get('last_diag')).last_diag; if (o && Date.now() - o.at < 15 * 60 * 1000 && !d.cardCount) d = Object.assign({ fromScanTab: true }, o.d); } catch (_) { /* pakai halaman ini */ }
       const txt = JSON.stringify(d, null, 1);
       await navigator.clipboard.writeText(txt);
       ui.setStatus(`Diagnosa disalin (${d.cardCount} kartu terdeteksi, ${Math.round(txt.length / 1024)} KB). Tempel di chat untuk developer.`, 'ok');

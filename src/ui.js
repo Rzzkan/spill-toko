@@ -83,7 +83,7 @@
           <button id="btnMulti">Scan multi-halaman</button>
           <button id="btnStop" class="danger" hidden>Stop</button>
         </div>
-        <label class="opt" title="Scan berjalan di jendela kecil terpisah; halaman yang sedang Anda lihat tidak ikut berpindah atau bergulir."><input type="checkbox" id="bgMode" checked> Scan di jendela terpisah</label>
+        <label class="opt" title="Scan berjalan di tab latar belakang yang menutup sendiri; halaman yang sedang Anda lihat tidak ikut berpindah atau bergulir."><input type="checkbox" id="bgMode" checked> Scan di tab latar belakang</label>
         <div class="status" id="status">Buka halaman pencarian, kategori, atau toko Shopee, lalu klik Scan.</div>
       </section>
       <section id="detail" hidden></section>

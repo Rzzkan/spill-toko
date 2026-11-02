@@ -417,6 +417,10 @@
   function diagnose(doc) {
     const cards = findCards(doc).slice(0, 3);
     return {
+      title: doc.title, blocked: !!(doc.location && isBlockedPage(doc.location)), bodyText: ((doc.body && doc.body.innerText) || '').slice(0, 700),
+      anchorTotal: doc.querySelectorAll('a[href]').length,
+      productAnchors: Array.prototype.slice.call(doc.querySelectorAll('a[href*="-i."]')).slice(0, 8).map(function (a) { return a.getAttribute('href').slice(0, 90); }),
+      sampleHrefs: Array.prototype.slice.call(doc.querySelectorAll('a[href]')).slice(0, 12).map(function (a) { return a.getAttribute('href').slice(0, 90); }),
       url: (doc.location && doc.location.href) || '', ua: (doc.defaultView && doc.defaultView.navigator.userAgent) || '', cardCount: findCards(doc).length,
       cards: cards.map(function (c) {
         const clone = c.card.cloneNode(true);

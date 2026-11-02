@@ -174,14 +174,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     (async () => {
       try {
         if (!/^https:\/\/shopee\.co\.id\//.test(msg.url || '')) throw new Error('url');
-        const sw = (msg.screen && msg.screen.w) || 1366, sh = (msg.screen && msg.screen.h) || 768;
-        const W = 780, H = 600;
-        const win = await chrome.windows.create({ url: msg.url, type: 'popup', focused: true, width: W, height: H, left: Math.max(0, sw - W - 10), top: Math.max(0, sh - H - 10) });
-        const tab = win.tabs && win.tabs[0];
+        // Tab latar belakang di jendela yang sama (tidak ada jendela baru, tab asal tidak berpindah).
+        const tab = await chrome.tabs.create({ url: msg.url, active: false, windowId: sender.tab ? sender.tab.windowId : undefined, index: sender.tab ? sender.tab.index + 1 : undefined });
         const { job } = await LS.get('job');
         if (!job) throw new Error('job');
         job.runnerTabId = tab ? tab.id : null;
-        job.runnerWindowId = win.id;
+        job.runnerWindowId = null;
+        job.shown = false;
         job.originTabId = sender.tab ? sender.tab.id : null;
         await LS.set({ job });
         sendResponse({ ok: true });
@@ -192,12 +191,17 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'spill-close-runner' || msg.type === 'spill-show-runner') {
     (async () => {
       const { job } = await LS.get('job');
-      const id = job && job.runnerWindowId;
+      const id = job && job.runnerTabId;
       if (id != null) {
         try {
-          if (msg.type === 'spill-close-runner') await chrome.windows.remove(id);
-          else await chrome.windows.update(id, { focused: true, drawAttention: true });
-        } catch (_) { /* jendela sudah tertutup */ }
+          if (msg.type === 'spill-close-runner') {
+            await chrome.tabs.remove(id);
+            if (job.shown && job.originTabId != null) { try { await chrome.tabs.update(job.originTabId, { active: true }); } catch (_) { /* asal sudah ditutup */ } }
+          } else {
+            job.shown = true; await LS.set({ job });
+            await chrome.tabs.update(id, { active: true });
+          }
+        } catch (_) { /* tab sudah tertutup */ }
       }
       sendResponse({ ok: true });
     })();
@@ -205,10 +209,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   }
 });
 
-// Pengguna menutup jendela scan sebelum selesai -> hentikan job agar tampilan di halaman asal tidak menggantung.
-chrome.windows.onRemoved.addListener(async (id) => {
+// Pengguna menutup tab scan sebelum selesai -> hentikan job agar tampilan di halaman asal tidak menggantung.
+chrome.tabs.onRemoved.addListener(async (id) => {
   const { job } = await LS.get('job');
-  if (job && job.mode === 'window' && job.runnerWindowId === id && job.active) {
+  if (job && job.mode === 'window' && job.runnerTabId === id && job.active) {
     job.active = false; job.aborted = true;
     await LS.set({ job });
   }
