@@ -22,11 +22,15 @@
   const rangeTxt = (lo, hi) => (lo == null ? '–' : hi && hi !== lo ? `${short(lo)} - ${short(hi)}` : short(lo));
   const ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ee4d2d" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>';
 
+  let VER = '';
+  try { VER = 'v' + chrome.runtime.getManifest().version; } catch (_) { /* di luar extension */ }
+
   const CSS = `
   :host{all:initial;display:block}
   *{box-sizing:border-box;font-family:Roboto,"Helvetica Neue",Arial,sans-serif}
   .card{background:#fff;border:1px solid #e8e8e8;border-radius:6px;padding:0 14px 14px;color:#222;font-size:14px;margin:10px 0;box-shadow:0 1px 2px rgba(0,0,0,.04)}
   .head{display:flex;align-items:center;gap:4px;padding:10px 0;flex-wrap:wrap}
+  .ver{font-size:10px;font-weight:600;color:#888;background:#f3f3f3;border-radius:8px;padding:1px 6px;margin-left:4px;align-self:center}
   .logo{display:flex;align-items:center;gap:6px;font-weight:700;font-size:17px;margin-right:12px;color:#111}
   .logo small{font-weight:400;color:#888;font-size:14px}
   .tab{padding:9px 15px;border-radius:8px;color:#555;cursor:pointer;background:transparent;border:0;font-size:14px}
@@ -384,11 +388,11 @@
       const k = payload.kind, d = payload.data;
       const aiS = ai && ai.kind === k ? ai.st : null;
       if (payload.locked || (plansOpen && L && L.enabled)) {
-        cardEl.innerHTML = `<div class="card"><div class="head"><span class="logo">${ICON}<span>Spill <small>Data</small></span></span>` +
+        cardEl.innerHTML = `<div class="card"><div class="head"><span class="logo">${ICON}<span>Spill <small>Data</small></span><small class="ver">${VER}</small></span>` +
           (!payload.locked ? '<button class="bdg" data-act="closeplans">✕ Tutup</button>' : '') + '</div>' + paywall() + '</div>';
         return;
       }
-      const head = `<div class="head"><span class="logo">${ICON}<span>Spill <small>Data</small></span></span>` +
+      const head = `<div class="head"><span class="logo">${ICON}<span>Spill <small>Data</small></span><small class="ver">${VER}</small></span>` +
         TABS[k].map((x) => `<button class="tab${tabs[k] === x[0] ? ' on' : ''}${x[0] === 'ai' ? ' ai' : ''}" data-tab="${x[0]}">${x[1]}${x[0] === 'ai' && aiS && aiS.status === 'ok' ? '<i class="dt"></i>' : ''}</button>`).join('') + badge() +
         `<span class="upd">${d.updatedAt ? 'Terakhir diperbarui ' + fmtDate(d.updatedAt) : 'Belum pernah di-scan'}. <a data-act="refresh">Refresh</a></span></div>`;
       const body = tabs[k] === 'ai' ? aiBody(k) : k === 'shop' ? shopBody(d) : k === 'search' ? searchBody(d) : productBody(d);

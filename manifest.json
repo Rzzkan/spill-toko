@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Spill Toko - Riset Produk Shopee",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Riset produk & toko kompetitor di Shopee langsung dari tampilan halaman: estimasi omzet, penjualan, filter, export CSV.",
   "permissions": [
     "storage",
@@ -47,5 +47,6 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArMDpzubQZTNoq3BGkpjZCAL2YBy98UUXsC8ukgAaB6hxTRXH7OPLZL/ELt6zz7lxaVwttAArqdg3qiwivJThmIOzaV7aphjASDNQQaOLlcm24KBrgL4EEhoPqBaZH7RMciz/Re0QammphnY6Tfy0OwQtsWhIc3cNlartziY8d8xp5HBs2EweMKbZuTEttUHtuNi2sXC3gp582BwGcnXtlfJwTG7cMwsOWaexdw/IlSBlCXF9wpCq6aEBEZ6WDHEb1rw2o3CgtaspyHoG6E87LwBYIv+WNjtGZHjQQ47wJY5I0RRFyP/bfGGi0BjIajkI7eFpzHo7f2nl0WGrm5WSKQIDAQAB"
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArMDpzubQZTNoq3BGkpjZCAL2YBy98UUXsC8ukgAaB6hxTRXH7OPLZL/ELt6zz7lxaVwttAArqdg3qiwivJThmIOzaV7aphjASDNQQaOLlcm24KBrgL4EEhoPqBaZH7RMciz/Re0QammphnY6Tfy0OwQtsWhIc3cNlartziY8d8xp5HBs2EweMKbZuTEttUHtuNi2sXC3gp582BwGcnXtlfJwTG7cMwsOWaexdw/IlSBlCXF9wpCq6aEBEZ6WDHEb1rw2o3CgtaspyHoG6E87LwBYIv+WNjtGZHjQQ47wJY5I0RRFyP/bfGGi0BjIajkI7eFpzHo7f2nl0WGrm5WSKQIDAQAB",
+  "version_name": "1.1.0 (3 Nov 2026 01:55 WIB)"
 }

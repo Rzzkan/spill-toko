@@ -57,6 +57,7 @@
   .lic{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--card);border-bottom:1px solid var(--line);font-size:12px}
   .lic span{flex:1}.lic .em{color:var(--mut)}
   .panel.locked .body,.panel.locked footer{display:none}
+  .ver{margin-left:6px;font-size:10px;font-weight:600;color:var(--mut);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:1px 6px}
   .lockmsg{padding:28px 18px;text-align:center;color:var(--mut);font-size:13px;line-height:1.5}
   .lockmsg b{display:block;color:var(--fg);font-size:15px;margin-bottom:6px}
   footer{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 12px;border-top:1px solid var(--line)}
@@ -70,7 +71,7 @@
   const HTML = `
   <button class="fab" id="fab" title="Buka Spill Toko">🔍 SPILL TOKO</button>
   <aside class="panel" id="panel" hidden>
-    <header><b>Spill Toko</b><span class="sub" id="ptype"></span><button id="close" title="Tutup">✕</button></header>
+    <header><b>Spill Toko</b><small class="ver" id="pver"></small><span class="sub" id="ptype"></span><button id="close" title="Tutup">✕</button></header>
     <div class="lic" id="lic" hidden></div>
     <div class="lockmsg" id="lockmsg" hidden><b>Fitur terkunci</b>Masuk dengan akun Google dan aktifkan trial atau langganan untuk memakai Spill Toko.</div>
     <div class="body">
@@ -275,6 +276,7 @@
 
     // ---- events ----
     const h2 = h;
+    try { const mf = chrome.runtime.getManifest(); $('pver').textContent = 'v' + mf.version; $('pver').title = mf.version_name || mf.version; } catch (_) { /* tanpa manifest */ }
     $('lic').onclick = (e) => { const b = e.target.closest('[data-l]'); if (b) h.onLicense(b.dataset.l); };
     $('fab').onclick = () => api.toggle(true);
     $('close').onclick = () => api.toggle(false);
