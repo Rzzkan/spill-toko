@@ -3,6 +3,8 @@
 self.SPILL_CONFIG = {
   // URL endpoint API, server: https://hipmibantul.site
   API_BASE: 'https://hipmibantul.site/api/index.php',
+  // Situs web (landing, login web, status langganan)
+  SITE_URL: 'https://hipmibantul.site',
   // OAuth Client ID tipe "Web application" dari Google Cloud Console
   GOOGLE_CLIENT_ID: '',
   // Salin dari admin: Pengaturan -> Extension -> LICENSE_PUBKEY (aman dipublikasikan)

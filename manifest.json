@@ -11,7 +11,8 @@
     "identity"
   ],
   "host_permissions": [
-    "https://shopee.co.id/*"
+    "https://shopee.co.id/*",
+    "https://hipmibantul.site/*"
   ],
   "background": {
     "service_worker": "background.js"
