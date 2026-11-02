@@ -32,6 +32,7 @@
   button.danger{color:var(--bad)}button:disabled{opacity:.5;cursor:default}
   input,select{font-size:12px;padding:5px 7px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--fg);min-width:0}
   input[type=number]{width:92px}input.q{flex:1;min-width:120px}
+  .opt{display:flex;align-items:center;gap:6px;font-size:12px;color:#555;margin-top:8px;cursor:pointer}
   .status{margin-top:6px;color:var(--mut);font-size:12px;min-height:16px}.status.err{color:var(--bad)}.status.ok{color:var(--ok)}
   .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
   .stat{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
@@ -77,6 +78,7 @@
           <button id="btnMulti">Scan multi-halaman</button>
           <button id="btnStop" class="danger" hidden>Stop</button>
         </div>
+        <label class="opt" title="Scan berjalan di jendela kecil terpisah; halaman yang sedang Anda lihat tidak ikut berpindah atau bergulir."><input type="checkbox" id="bgMode" checked> Scan di jendela terpisah</label>
         <div class="status" id="status">Buka halaman pencarian, kategori, atau toko Shopee, lalu klik Scan.</div>
       </section>
       <section id="detail" hidden></section>
@@ -274,6 +276,10 @@
     $('btnScan').onclick = () => h.onScan();
     $('btnMulti').onclick = () => h.onMulti(Math.max(1, Math.min(20, Number($('pages').value) || 1)));
     $('btnStop').onclick = () => h.onStop();
+    try {
+      chrome.storage.local.get('scan_window').then((o) => { $('bgMode').checked = o.scan_window !== false; });
+      $('bgMode').onchange = (e) => { chrome.storage.local.set({ scan_window: !!e.target.checked }); };
+    } catch (_) { /* tanpa storage */ }
     $('btnCsv').onclick = () => h.onExport(visible());
     $('btnCopy').onclick = () => h.onCopy(visible());
     $('btnClear').onclick = () => { if (confirm('Hapus semua koleksi tersimpan?')) h.onClear(); };

@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font-family:Arial}.nav{background:#fff;padding:14px;display:flex;gap:30px}
+.left{min-width:0}.prods{height:300px;background:#eee}.wrap{max-width:1180px;margin:0 auto}
+</style></head><body><div class="wrap" id="wrap"></div>
+<script>
+const v = new URLSearchParams(location.search).get('v');
+const left = '<div class="left"><div style="height:200px;background:#ddd">banner</div><div class="nav"><span>Halaman Utama</span><b>Produk</b></div><div class="prods">produk</div></div>';
+const root = document.getElementById('wrap');
+if (v === 'grid') root.innerHTML = '<div id="row" style="display:grid;grid-template-columns:1fr 330px;gap:16px">' + left + '<div style="background:#fafafa">sidebar</div></div><div id="after" style="height:50px;background:#cfc">setelah</div>';
+if (v === 'flex') root.innerHTML = '<div id="row" style="display:flex">' + '<div style="width:70%">' + left + '</div><div style="flex:1;background:#fafafa">sidebar</div></div><div id="after" style="height:50px;background:#cfc">setelah</div>';
+if (v === 'block') root.innerHTML = left + '<div id="after" style="height:50px;background:#cfc">setelah</div>';
+</script>
+<script src="../../src/inline.js"></script>
+<script>
+const rows=[{key:'1.1',name:'x',price:1,sold:1,omzet:1,url:'#',shopId:'1'}];
+window.UI = SpillInline.create({ getRows:()=>({rows,updatedAt:0}), onLicense(){}, onAnalyze(){}, onAi(){}, onRefresh(){}, onPanel(){}, onMulti(){}, onDownload(){} });
+UI.render({ kind:'shop', data:{ updatedAt: Date.now(), stats:null, info:{}, scanned:0 } });
+</script></body></html>

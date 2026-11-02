@@ -141,7 +141,6 @@
     // ---------- kartu inline ----------
     const host = document.createElement('div');
     host.id = 'spill-inline-host';
-    host.style.cssText = 'display:block;width:100%;';
     const sr = host.attachShadow({ mode: 'open' });
     sr.innerHTML = '<style>' + CSS + '</style><div id="card"></div>';
     const cardEl = sr.getElementById('card');
@@ -168,11 +167,31 @@
       return null;
     }
 
+    // Kartu harus selalu selebar kontainer & berada DI BAWAH anchor (bukan terjepit di kolom samping
+    // saat induknya flex/grid baris, seperti pada layout profil toko Shopee).
+    const HOST_CSS = 'display:block;width:100%;max-width:none;min-width:0;box-sizing:border-box;grid-column:1/-1;flex:0 0 100%;align-self:stretch;clear:both;';
+    function misplaced(anchor, pos) {
+      const hr = host.getBoundingClientRect(), ar = anchor.getBoundingClientRect();
+      if (!hr.width || !ar.width) return false;
+      const beside = hr.left >= ar.right - 10 || hr.right <= ar.left + 10;
+      const narrow = hr.width < ar.width * 0.8;
+      const wrongSide = pos === 'afterend' ? hr.top < ar.bottom - 8 : hr.bottom > ar.top + 8;
+      return beside || narrow || wrongSide;
+    }
+
     function place() {
       if (!payload) return;
       const a = findAnchor(payload.kind);
-      if (a) { a.el.insertAdjacentElement(a.pos, host); placedKind = payload.kind; return true; }
-      return false;
+      if (!a) return false;
+      host.style.cssText = HOST_CSS;
+      let anchor = a.el;
+      anchor.insertAdjacentElement(a.pos, host);
+      for (let i = 0; i < 4 && anchor.parentElement && anchor.parentElement !== document.body && anchor.parentElement !== document.documentElement && misplaced(anchor, a.pos); i++) {
+        anchor = anchor.parentElement;
+        anchor.insertAdjacentElement(a.pos, host);
+      }
+      placedKind = payload.kind;
+      return true;
     }
 
     setInterval(() => { if (payload && !host.isConnected) place(); }, 1500);

@@ -336,10 +336,22 @@
   }
 
   // ---------- multi-halaman (bertahan lewat reload halaman) ----------
+  const send = (msg) => new Promise((res) => { try { chrome.runtime.sendMessage(msg, (r) => res(chrome.runtime.lastError ? null : r)); } catch (_) { res(null); } });
+  const useWindow = async () => (await chrome.storage.local.get('scan_window')).scan_window !== false;
+  let myTabId = null;
+
   async function startJob(job, url) {
-    await S.setJob(Object.assign({ active: true, done: 0, found: 0, startedAt: Date.now() }, job));
-    sessionStorage.setItem('spill_owner', '1');
+    const base = Object.assign({ active: true, done: 0, found: 0, startedAt: Date.now() }, job);
     cancelled = false;
+    if (await useWindow()) {
+      // Scan berjalan di jendela popup terpisah; halaman ini tidak berpindah/bergulir.
+      await S.setJob(Object.assign({}, base, { mode: 'window', returnUrl: null }));
+      const r = await send({ type: 'spill-open-runner', url: url || location.href, screen: { w: screen.availWidth, h: screen.availHeight } });
+      if (r && r.ok) { setBusyAll(true, 'Memindai di jendela lain…'); ui.setStatus('Scan berjalan di jendela terpisah (kanan bawah layar). Anda bisa tetap memakai halaman ini.'); return; }
+      ui.setStatus('Jendela scan gagal dibuka — memindai langsung di tab ini.', 'err');
+    }
+    await S.setJob(base);
+    sessionStorage.setItem('spill_owner', '1');
     if (url) { location.href = url; return; }
     await runJobStep();
   }
@@ -368,21 +380,27 @@
   async function runJobStep() {
     const job = await S.getJob();
     if (!job || !job.active) return;
+    const inWin = job.mode === 'window';
+    const closeRunner = () => { if (inWin) send({ type: 'spill-close-runner' }); };
     if (P.isBlockedPage(location)) {
-      job.active = false; await S.setJob(job);
+      job.active = false; job.blocked = true; await S.setJob(job);
       setBusyAll(false);
       ui.setStatus(`Berhenti: Shopee meminta verifikasi/login. Terkumpul ${job.found} produk. Selesaikan manual lalu scan lagi.`, 'err');
+      if (inWin) send({ type: 'spill-show-runner' });   // bawa jendela ke depan agar captcha bisa diselesaikan
       return;
     }
     setBusyAll(true, `Memindai ${job.done + 1}/${job.total}…`);
-    ui.setStatus(`Halaman ${job.done + 1} dari ${job.total}… (jangan tutup tab)`);
+    ui.setStatus(`Halaman ${job.done + 1} dari ${job.total}… (jangan tutup ${inWin ? 'jendela ini' : 'tab'})`);
     let n = 0;
     try { n = (await scanPage()).n; } catch (e) { ui.setStatus('Gagal: ' + e.message, 'err'); }
+    const fresh = await S.getJob();
+    if (!fresh || !fresh.active) { setBusyAll(false); closeRunner(); return; }   // dihentikan dari halaman asal
     job.done++; job.found = (job.found || 0) + n;
     if (cancelled || n === 0 || job.done >= job.total) {
-      job.active = false; await S.setJob(job);
+      job.active = false; job.finished = !cancelled; await S.setJob(job);
       setBusyAll(false);
       ui.setStatus(cancelled ? `Dihentikan. ${job.found} produk terbaca.` : `Selesai ${job.done} halaman — ${job.found} produk terbaca.`, 'ok');
+      if (inWin) { closeRunner(); return; }
       if (job.returnUrl && !cancelled) {
         sessionStorage.setItem('spill_open_modal', job.openModal ? '1' : '');
         location.href = job.returnUrl;
@@ -392,14 +410,14 @@
     await S.setJob(job);
     ui.setStatus(`Halaman ${job.done}/${job.total} selesai (${job.found} produk). Lanjut ke halaman berikut…`);
     await sleep(rand(2500, 4500)); // jeda acak agar tidak seperti bot
-    if (cancelled) { job.active = false; await S.setJob(job); setBusyAll(false); return; }
+    if (cancelled) { job.active = false; await S.setJob(job); setBusyAll(false); closeRunner(); return; }
     location.href = P.nextPageUrl(location.href);
   }
 
   async function onStop() {
     cancelled = true;
     const job = await S.getJob();
-    if (job) { job.active = false; await S.setJob(job); }
+    if (job) { job.active = false; await S.setJob(job); if (job.mode === 'window') send({ type: 'spill-close-runner' }); }
     ui.setStatus('Menghentikan…');
   }
 
@@ -569,9 +587,36 @@
     document.addEventListener('visibilitychange', () => { if (!document.hidden && lic.enabled && (lic.pending || !lic.access)) refreshLicense(true); });
     setInterval(() => { if (location.href !== lastHref) { lastHref = location.href; onUrlChange(); } }, 800);
 
+    // identitas tab ini (untuk membedakan halaman asal vs jendela scan)
+    const who = await send({ type: 'spill-whoami' });
+    myTabId = who && who.tabId != null ? who.tabId : null;
+
+    // halaman asal: ikuti progres job yang berjalan di jendela scan
+    let lastSeen = '';
+    chrome.storage.onChanged.addListener(async (ch, area) => {
+      if (area !== 'local' || !ch.job) return;
+      const j = ch.job.newValue;
+      if (!j || j.mode !== 'window' || myTabId == null || j.originTabId !== myTabId) return;
+      if (j.active) { setBusyAll(true, `Memindai ${Math.min(j.done + 1, j.total)}/${j.total} (jendela lain)…`); ui.setStatus(`Jendela scan: ${j.done}/${j.total} halaman, ${j.found || 0} produk terbaca.`); return; }
+      const key = j.startedAt + ':' + (j.finished ? 'f' : j.blocked ? 'b' : 'x');
+      if (key === lastSeen) return;
+      lastSeen = key;
+      setBusyAll(false);
+      await refresh();
+      if (j.finished) { ui.setStatus(`Selesai ${j.done} halaman — ${j.found} produk terbaca.`, 'ok'); if (j.openModal) inline.openModal(); }
+      else if (j.blocked) ui.setStatus(`Shopee meminta verifikasi di jendela scan. Selesaikan di sana, lalu scan lagi. (${j.found} produk terbaca)`, 'err');
+      else ui.setStatus(`Scan dihentikan${j.aborted ? ' (jendela scan ditutup)' : ''}. ${j.found || 0} produk terbaca.`, 'err');
+    });
+
     // lanjutkan job multi-halaman setelah halaman baru termuat
-    const job = await S.getJob();
-    if (job && job.active && sessionStorage.getItem('spill_owner') === '1' && Date.now() - job.startedAt < 30 * 60 * 1000) {
+    let job = await S.getJob();
+    if (job && job.active && job.mode === 'window') {
+      for (let i = 0; i < 6 && job.active && job.runnerTabId == null; i++) { await sleep(400); job = (await S.getJob()) || job; }
+      if (job.active && myTabId != null && job.runnerTabId === myTabId && Date.now() - job.startedAt < 30 * 60 * 1000) {
+        await sleep(2500);
+        runJobStep();
+      }
+    } else if (job && job.active && sessionStorage.getItem('spill_owner') === '1' && Date.now() - job.startedAt < 30 * 60 * 1000) {
       await sleep(2500);
       runJobStep();
     } else if (sessionStorage.getItem('spill_open_modal') === '1') {

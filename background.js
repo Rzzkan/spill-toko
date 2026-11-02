@@ -157,3 +157,54 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   })();
   return true;
 });
+
+
+// ---------- scan di jendela terpisah ----------
+// Halaman yang sedang dilihat pengguna tidak berpindah/bergulir: scan berjalan di jendela popup kecil
+// yang dibuat di sini, lalu ditutup otomatis setelah selesai.
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (!msg || typeof msg.type !== 'string') return;
+  if (msg.type === 'spill-whoami') { sendResponse({ tabId: sender.tab ? sender.tab.id : null }); return; }
+  if (msg.type === 'spill-open-runner') {
+    (async () => {
+      try {
+        if (!/^https:\/\/shopee\.co\.id\//.test(msg.url || '')) throw new Error('url');
+        const sw = (msg.screen && msg.screen.w) || 1366, sh = (msg.screen && msg.screen.h) || 768;
+        const W = 780, H = 600;
+        const win = await chrome.windows.create({ url: msg.url, type: 'popup', focused: false, width: W, height: H, left: Math.max(0, sw - W - 10), top: Math.max(0, sh - H - 10) });
+        const tab = win.tabs && win.tabs[0];
+        const { job } = await LS.get('job');
+        if (!job) throw new Error('job');
+        job.runnerTabId = tab ? tab.id : null;
+        job.runnerWindowId = win.id;
+        job.originTabId = sender.tab ? sender.tab.id : null;
+        await LS.set({ job });
+        sendResponse({ ok: true });
+      } catch (e) { sendResponse({ ok: false, error: String(e && e.message || e) }); }
+    })();
+    return true;
+  }
+  if (msg.type === 'spill-close-runner' || msg.type === 'spill-show-runner') {
+    (async () => {
+      const { job } = await LS.get('job');
+      const id = job && job.runnerWindowId;
+      if (id != null) {
+        try {
+          if (msg.type === 'spill-close-runner') await chrome.windows.remove(id);
+          else await chrome.windows.update(id, { focused: true, drawAttention: true });
+        } catch (_) { /* jendela sudah tertutup */ }
+      }
+      sendResponse({ ok: true });
+    })();
+    return true;
+  }
+});
+
+// Pengguna menutup jendela scan sebelum selesai -> hentikan job agar tampilan di halaman asal tidak menggantung.
+chrome.windows.onRemoved.addListener(async (id) => {
+  const { job } = await LS.get('job');
+  if (job && job.mode === 'window' && job.runnerWindowId === id && job.active) {
+    job.active = false; job.aborted = true;
+    await LS.set({ job });
+  }
+});

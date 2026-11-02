@@ -36,6 +36,9 @@ Kartu **Spill Data** tertanam langsung di halaman Shopee:
 | Filter & sort | Cari nama/lokasi, min terjual, rentang harga, min omzet; klik header kolom untuk sort |
 | Export | **Export CSV** (langsung terbuka rapi di Excel) atau **Salin (Sheets)** untuk paste ke Google Sheets |
 
+## Scan di jendela terpisah
+Secara default scan multi-halaman & **Analisa Detail toko** berjalan di jendela popup kecil (kanan bawah layar), jadi halaman yang sedang Anda lihat tidak berpindah atau bergulir sendiri. Jendela menutup otomatis setelah selesai; hasil langsung muncul di kartu. Tombol **Stop** menutup jendela itu. Jika Shopee meminta verifikasi/captcha, jendela dibawa ke depan agar bisa diselesaikan. Matikan opsi *Scan di jendela terpisah* di panel untuk kembali ke mode lama (scan langsung di tab ini). Jangan menutup jendela scan sebelum selesai.
+
 ## Batasan (jujur)
 - Angka terjual di tampilan Shopee dibulatkan ("2,5RB+", "10RB+"), jadi omzet adalah **estimasi batas bawah**, bukan angka pasti.
 - Jika kartu menampilkan "terjual/bulan", kolom Terjual diberi label `/bulan`; jika tidak, itu angka total sepanjang masa.
