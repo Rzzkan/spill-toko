@@ -57,3 +57,7 @@ src/content.js     scan, auto-scroll, multi-halaman, export
 
 ## Analisis AI
 Di kartu inline ada tab **✨ Analisa AI** (produk, toko, pencarian). Data hasil scrape dikirim ke server Anda, diteruskan ke model di kenari.id, dan hasilnya (skor peluang, temuan, risiko, rekomendasi aksi, kata kunci, saran judul) tampil di kartu. Berjalan otomatis setelah scan selesai bila admin mengaktifkannya; tombol **Analisis ulang** memaksa analisis baru. Semua konfigurasi (API key, model, prompt, kuota) ada di halaman admin web — API key tidak pernah ada di extension. Butuh server lisensi aktif (lihat `spill-toko-server`).
+
+
+## Build paket Web Store
+`node tools/build.mjs --api https://DOMAIN/api/index.php --client-id XXX.apps.googleusercontent.com --pubkey LICENSE_PUBKEY` → `dist/spill-toko-<versi>.zip` (config terisi, field `key` dihapus). Panduan deploy server lengkap ada di repo `spill-toko-server` (`deploy/README.md`).
