@@ -376,11 +376,13 @@
     const info = P.parseShopInfo(document);
     const saved = (await S.shop(sid)) || {};
     const products = info.products || saved.products || 60;
-    const total = Math.min(15, Math.max(1, Math.ceil(products / 30)));
+    // Halaman pencarian toko (/shop/ID/search) memicu captcha anti-bot Shopee, jadi yang dipindai adalah halaman toko biasa
+    // (produk unggulan/terlaris/terbaru yang dirender Shopee di sana). Paginasi tab "Produk" bisa dipindai manual lewat tombol Scan.
+    const shopUrl = location.origin + location.pathname.replace(/\/(search|\w+_list)$/, '');
     setBusyAll(true, 'Memindai…');
-    await startJob({ total: total, kind: 'shop', shopId: sid, returnUrl: location.href, openModal: !force },
-      `https://shopee.co.id/shop/${sid}/search?page=0&sortBy=sales`);
+    await startJob({ total: 1, kind: 'shop', shopId: sid, returnUrl: location.href, openModal: !force }, shopUrl);
   }
+
 
   // Tunggu kartu produk dirender Shopee (halaman React lambat / jendela di latar belakang).
   async function waitForProducts(ms) {
