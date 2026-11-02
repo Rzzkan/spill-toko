@@ -56,6 +56,9 @@
   .top{margin:4px 0 0;padding-left:16px}.top li{margin:2px 0}
   .lic{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--card);border-bottom:1px solid var(--line);font-size:12px}
   .lic span{flex:1}.lic .em{color:var(--mut)}
+  .panel.locked .body,.panel.locked footer{display:none}
+  .lockmsg{padding:28px 18px;text-align:center;color:var(--mut);font-size:13px;line-height:1.5}
+  .lockmsg b{display:block;color:var(--fg);font-size:15px;margin-bottom:6px}
   footer{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 12px;border-top:1px solid var(--line)}
   footer .sp{flex:1;color:var(--mut);font-size:11px}
   h4{margin:0 0 6px;font-size:12px}
@@ -69,6 +72,7 @@
   <aside class="panel" id="panel" hidden>
     <header><b>Spill Toko</b><span class="sub" id="ptype"></span><button id="close" title="Tutup">✕</button></header>
     <div class="lic" id="lic" hidden></div>
+    <div class="lockmsg" id="lockmsg" hidden><b>Fitur terkunci</b>Masuk dengan akun Google dan aktifkan trial atau langganan untuk memakai Spill Toko.</div>
     <div class="body">
       <section>
         <div class="row">
@@ -106,6 +110,7 @@
       <button class="pri" id="btnCsv">Export CSV</button>
       <button id="btnCopy">Salin (Sheets)</button>
       <button id="btnClear" class="danger">Hapus koleksi</button>
+      <button id="btnDiag" title="Salin struktur halaman untuk developer (membantu memperbaiki pembacaan data)">Salin diagnosa</button>
       <span class="sp" id="count"></span>
     </footer>
   </aside>`;
@@ -282,6 +287,7 @@
     } catch (_) { /* tanpa storage */ }
     $('btnCsv').onclick = () => h.onExport(visible());
     $('btnCopy').onclick = () => h.onCopy(visible());
+    $('btnDiag').onclick = () => h.onDiag && h.onDiag();
     $('btnClear').onclick = () => { if (confirm('Hapus semua koleksi tersimpan?')) h.onClear(); };
     $('tabP').onclick = () => { state.tab = 'produk'; render(); };
     $('tabS').onclick = () => { state.tab = 'toko'; render(); };
@@ -305,14 +311,18 @@
       },
       setLicense(L) {
         const el = $('lic');
+        const locked = !!(L && L.enabled && !L.access);
+        $('panel').classList.toggle('locked', locked);
+        $('lockmsg').hidden = !locked;
         if (!L || !L.enabled) { el.hidden = true; return; }
         el.hidden = false;
         const btn = (a, t, pri) => `<button class="${pri ? 'pri' : ''}" data-l="${a}">${t}</button>`;
         let t = '', b = '';
-        if (L.state === 'signedout') { t = 'Belum masuk — trial 3 hari gratis'; b = btn('login', 'Masuk dengan Google', 1); }
+        if (L.state === 'signedout') { t = 'Masuk dengan Google untuk memakai extension (trial 3 hari gratis)'; b = btn('login', 'Masuk dengan Google', 1); }
         else if (L.state === 'trial') { t = `Trial · ${L.daysLeft} hari lagi`; b = btn('plans', 'Upgrade', 1) + btn('logout', 'Keluar'); }
         else if (L.state === 'active') { t = `Aktif · ${L.daysLeft} hari lagi`; b = btn('plans', 'Perpanjang') + btn('logout', 'Keluar'); }
         else if (L.state === 'lifetime') { t = 'Lifetime ★'; b = btn('logout', 'Keluar'); }
+        else if (L.state === 'unconfigured') { t = esc(L.message); b = ''; }
         else if (L.state === 'expired') { t = 'Masa aktif berakhir'; b = btn('plans', 'Pilih paket', 1) + btn('logout', 'Keluar'); }
         else { t = esc(L.message || 'Lisensi belum terverifikasi'); b = btn('refresh', 'Coba lagi'); }
         el.innerHTML = `<span>${t}${L.email ? ' <i class="em">· ' + esc(L.email) + '</i>' : ''}</span>${b}`;

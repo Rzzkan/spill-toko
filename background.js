@@ -63,7 +63,10 @@ async function verifyLicense(lic) {
 const FRESH_MS = 10 * 60 * 1000;
 
 async function getState(force) {
-  if (!ENABLED) return { enabled: false, state: 'disabled', access: true };
+  if (!ENABLED) {
+    if (CFG.DEV_OPEN === true) return { enabled: false, state: 'disabled', access: true };   // hanya untuk pengembangan
+    return { enabled: true, state: 'unconfigured', access: false, message: 'Extension belum dikonfigurasi (API, Google Client ID, LICENSE_PUBKEY). Hubungi penyedia.' };
+  }
   const st = await LS.get(['lic_token', 'lic_cache', 'lic_pending']);
   if (!st.lic_token) return { enabled: true, state: 'signedout', access: false, plans: (st.lic_cache && st.lic_cache.plans) || null };
 
@@ -94,7 +97,7 @@ async function getState(force) {
     pending = null;
   } else if (st.lic_pending && !pending) await LS.remove('lic_pending');
 
-  const access = !!p.access;
+  const access = !!p.access && (p.until == null || now <= p.until);
   return {
     enabled: true, access, state: access ? (p.plan === 'monthly' ? 'active' : p.plan) : 'expired', plan: p.plan,
     email: p.email, name: p.name, picture: p.picture,

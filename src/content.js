@@ -12,7 +12,7 @@
   let pageKeys = new Set();
   let allItems = [];
   let detail = null, competitors = [];
-  let lic = { enabled: false, state: 'disabled', access: true };
+  let lic = { enabled: true, state: 'signedout', access: false };   // terkunci sampai status lisensi terbaca
   let licTimer = null;
 
   // ---------- lisensi ----------
@@ -31,7 +31,7 @@
 
   function guard() {
     if (lic.access) return true;
-    ui.setStatus('Fitur terkunci. Masuk dengan Google (trial 3 hari gratis) atau pilih paket.', 'err');
+    ui.setStatus('Fitur terkunci. Masuk dengan Google dan aktifkan trial 3 hari gratis atau langganan.', 'err');
     return false;
   }
 
@@ -318,10 +318,15 @@
     return { n: 0 };
   }
 
-  async function onScan(silent) {
+  async function onScan(opts) {
     if (busy) return 0;
     if (!guard()) return 0;
     if (P.isBlockedPage(location)) { ui.setStatus('Shopee meminta verifikasi/login. Selesaikan dulu secara manual.', 'err'); return 0; }
+    if (await useWindow()) {   // scan di jendela terpisah: halaman ini tidak bergulir/berpindah
+      setBusyAll(true, 'Memindai di jendela lain…');
+      await startJob({ total: 1, openModal: !!(opts && opts.openModal) }, null);
+      return 0;
+    }
     cancelled = false; setBusyAll(true, 'Memindai…');
     ui.setStatus('Scroll & membaca produk…');
     let n = 0;
@@ -381,6 +386,7 @@
     const job = await S.getJob();
     if (!job || !job.active) return;
     const inWin = job.mode === 'window';
+    if (!lic.access) { job.active = false; job.aborted = true; await S.setJob(job); if (inWin) send({ type: 'spill-close-runner' }); return; }   // wajib login & langganan aktif
     const closeRunner = () => { if (inWin) send({ type: 'spill-close-runner' }); };
     if (P.isBlockedPage(location)) {
       job.active = false; job.blocked = true; await S.setJob(job);
@@ -457,7 +463,10 @@
     }
     // search / category
     const have = (await scopeItems('search')).length;
-    if (!have) { const n = await onScan(); if (!n) return; }
+    if (!have) {
+      if (await useWindow()) { await onScan({ openModal: true }); return; }   // modal terbuka otomatis setelah jendela scan selesai
+      const n = await onScan(); if (!n) return;
+    }
     inline.openModal();
   }
 
@@ -466,7 +475,7 @@
     if (!guard()) return;
     if (kind === 'product') return readAndSave();
     if (kind === 'shop') return onShopAnalyze(true);
-    const n = await onScan();
+    const n = await onScan({ openModal: !!fromModal });
     if (n && fromModal) inline.refreshModal();
   }
 
@@ -538,6 +547,15 @@
     catch (e) { ui.setStatus('Gagal menyalin: ' + e.message, 'err'); }
   }
 
+  async function onDiag() {
+    try {
+      const d = P.diagnose(document);
+      const txt = JSON.stringify(d, null, 1);
+      await navigator.clipboard.writeText(txt);
+      ui.setStatus(`Diagnosa disalin (${d.cardCount} kartu terdeteksi, ${Math.round(txt.length / 1024)} KB). Tempel di chat untuk developer.`, 'ok');
+    } catch (e) { ui.setStatus('Gagal menyalin diagnosa: ' + e.message, 'err'); }
+  }
+
   async function onClear() {
     await S.clear(); pageKeys = new Set(); await refresh();
     ui.setStatus('Koleksi dihapus.', 'ok');
@@ -573,7 +591,7 @@
   }
 
   async function init() {
-    ui = SpillUI.mount({ onScan: () => onScan(), onMulti, onStop, onAnalyze: onProductAnalyze, onSaveDetail, onExport, onCopy, onClear, onLicense });
+    ui = SpillUI.mount({ onScan: () => onScan(), onMulti, onStop, onAnalyze: onProductAnalyze, onSaveDetail, onExport, onCopy, onClear, onDiag, onLicense });
     inline = SpillInline.create({
       onAnalyze, onRefresh, onAi, onPanel: () => ui.toggle(true), onMulti, onLicense,
       getRows: getRows, onDownload: (rows) => onExport(rows)

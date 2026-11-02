@@ -322,7 +322,7 @@
         return `<div class="pw"><h3>Mulai trial gratis 3 hari</h3><p>Masuk dengan Google untuk mengaktifkan Spill Data. Tanpa kartu kredit.</p>
           <button class="gbtn" data-lic="login" ${dis}>${GICON} ${esc(lbusy || 'Masuk dengan Google')}</button>${err}</div>`;
       }
-      if (l.state === 'offline' || l.state === 'invalid') {
+      if (l.state === 'offline' || l.state === 'invalid' || l.state === 'unconfigured') {
         return `<div class="pw"><h3>Lisensi belum bisa diverifikasi</h3><p>${esc(l.message || 'Periksa koneksi internet lalu coba lagi.')}</p>
           <button class="btn" data-lic="refresh">Coba lagi</button>${l.state === 'invalid' ? ' <button class="gbtn" data-lic="logout">Masuk ulang</button>' : ''}${err}</div>`;
       }

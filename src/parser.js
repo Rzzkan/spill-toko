@@ -154,6 +154,15 @@
     return out;
   }
 
+  function textNodes(el) {
+    const out = [];
+    const doc = el.ownerDocument;
+    const w = doc.createTreeWalker(el, 4 /* NodeFilter.SHOW_TEXT */);
+    let n;
+    while ((n = w.nextNode())) { const t = (n.nodeValue || '').replace(/\s+/g, ' ').trim(); if (t) out.push(t); }
+    return out;
+  }
+
   const LOC_BLOCK = /^(STAR|MALL|COD|XTRA|CHOICE|OFF|DISKON|TERJUAL)|ONGKIR|PROMO|TERLARIS|REKOMENDASI|IKLAN|CASHBACK|VOUCHER/;
   const NOT_NAME = /^(rp\s*\d|star\+?$|mall$|cod$|iklan$|ad$|xtra$|gratis ongkir|cashback|voucher|terlaris|pilihan|termurah|bayar di tempat)/i;
 
@@ -164,7 +173,13 @@
     const priceLines = lines.filter(function (l) {
       return /Rp/i.test(l) && !/diskon|cashback|voucher|ongkir|hemat|koin|\boff\b/i.test(l);
     });
-    const pr = priceFromText(priceLines.join('\n'));
+    let pr = priceFromText(priceLines.join('\n'));
+    if (pr.price == null) {
+      // cadangan: baca per node teks (tahan terhadap "Rp" & angka di elemen/ node terpisah, atau di dalam elemen tersembunyi dari innerText)
+      const nodes = textNodes(card);
+      const alt = priceFromText(mergeRp(nodes).filter(function (l) { return /Rp/i.test(l) && !/diskon|cashback|voucher|ongkir|hemat|koin|\boff\b/i.test(l); }).join('\n'));
+      if (alt.price != null) pr = alt;
+    }
     const sd = parseSold(lines.join('\n'));
 
     const ratingLine = lines.find(function (l) { return /^[0-5][.,]\d{1,2}$/.test(l); });
@@ -398,8 +413,30 @@
     return { count: items.length, totalOmzet: totalOmzet, totalSold: totalSold, top: top };
   }
 
+  // Diagnosa untuk developer: struktur HTML 3 kartu pertama + hasil parse (tanpa data pribadi).
+  function diagnose(doc) {
+    const cards = findCards(doc).slice(0, 3);
+    return {
+      url: (doc.location && doc.location.href) || '', ua: (doc.defaultView && doc.defaultView.navigator.userAgent) || '', cardCount: findCards(doc).length,
+      cards: cards.map(function (c) {
+        const clone = c.card.cloneNode(true);
+        clone.querySelectorAll('*').forEach(function (e) {
+          Array.prototype.slice.call(e.attributes).forEach(function (a) {
+            if (a.name === 'style' || a.name === 'srcset' || a.name.indexOf('data-') === 0 && a.name !== 'data-testid') e.removeAttribute(a.name);
+            else if ((a.name === 'src' || a.name === 'href') && a.value.length > 70) e.setAttribute(a.name, a.value.slice(0, 70) + '…');
+            else if (a.name === 'class' && a.value.length > 60) e.setAttribute('class', a.value.slice(0, 60));
+          });
+        });
+        return {
+          href: c.href, innerText: getText(c.card).slice(0, 600), textNodes: textNodes(c.card).slice(0, 40),
+          parsed: parseCard(c.card, c.ids), html: clone.outerHTML.slice(0, 3500)
+        };
+      })
+    };
+  }
+
   return {
-    parseCount: parseCount, parseRupiah: parseRupiah, parseSold: parseSold, priceFromText: priceFromText,
+    diagnose: diagnose, parseCount: parseCount, parseRupiah: parseRupiah, parseSold: parseSold, priceFromText: priceFromText,
     idsFromHref: idsFromHref, pageType: pageType, nextPageUrl: nextPageUrl, isBlockedPage: isBlockedPage,
     findCards: findCards, parseCard: parseCard, parseAll: parseAll,
     parseProductPage: parseProductPage, parseShopInfo: parseShopInfo, shopSummary: shopSummary

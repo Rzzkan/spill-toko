@@ -9,6 +9,8 @@ self.SPILL_CONFIG = {
   GOOGLE_CLIENT_ID: '',
   // Salin dari admin: Pengaturan -> Extension -> LICENSE_PUBKEY (aman dipublikasikan)
   LICENSE_PUBKEY: '',
+  // JANGAN diaktifkan di produksi: true = semua fitur terbuka tanpa login (hanya untuk pengembangan lokal)
+  DEV_OPEN: false,
   // Hanya untuk pengujian otomatis; biarkan kosong di produksi
   DEV_ID_TOKEN: '',
   DEV_NONCE: ''

@@ -25,7 +25,7 @@ for (const f of ['background.js', 'icons', 'src']) fs.cpSync(path.join(root, f),
 delete manifest.key;
 fs.writeFileSync(path.join(out, 'manifest.json'), JSON.stringify(manifest, null, 2));
 fs.writeFileSync(path.join(out, 'src', 'config.js'),
-  `// Dibuat oleh tools/build.mjs - jangan diedit manual.\nself.SPILL_CONFIG = { API_BASE: ${JSON.stringify(API)}, GOOGLE_CLIENT_ID: ${JSON.stringify(CID)}, LICENSE_PUBKEY: ${JSON.stringify(PUB)}, DEV_ID_TOKEN: '', DEV_NONCE: '' };\n`);
+  `// Dibuat oleh tools/build.mjs - jangan diedit manual.\nself.SPILL_CONFIG = { API_BASE: ${JSON.stringify(API)}, GOOGLE_CLIENT_ID: ${JSON.stringify(CID)}, LICENSE_PUBKEY: ${JSON.stringify(PUB)}, DEV_OPEN: false, DEV_ID_TOKEN: '', DEV_NONCE: '' };\n`);
 
 const zip = out + '.zip';
 fs.rmSync(zip, { force: true });
