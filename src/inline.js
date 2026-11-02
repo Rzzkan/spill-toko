@@ -294,6 +294,7 @@
       const l = L || {};
       const pl = l.plans || {};
       const p1 = pl.monthly || { label: 'Bulanan', price: 24000, original: 49000, days: 30 }, p2 = pl.yearly || { label: 'Tahunan', price: 249000, original: 549000, days: 365 };
+      const aiLine = (p) => (p.ai_limit === undefined ? '' : `<li>Analisa AI ${p.ai_limit === null ? 'tanpa batas' : p.ai_limit + 'x'}/hari</li>`);
       const off = (p) => (p.original > p.price ? Math.round((1 - p.price / p.original) * 100) : 0);
       const was = (p) => (p.original > p.price ? `<s style="opacity:.55;font-size:12px">${full(p.original)}</s> ` : '');
       const dis = lbusy ? 'disabled' : '';
@@ -310,10 +311,10 @@
         : '<h3>Pilih paket</h3><p>Upgrade kapan saja — sisa masa aktif Anda tidak hangus.</p>';
       const wait = l.pending ? '<div class="wait">⏳ Menunggu pembayaran… akses aktif otomatis setelah bayar. <a data-lic="refresh">Sudah bayar? Cek status</a></div>' : '';
       const yearBox = `<div class="pl hot"><small>${esc(p2.label)}${off(p2) ? ' · hemat ' + off(p2) + '%' : ''}</small><div>${was(p2)}</div><b>${full(p2.price)}</b><small>per tahun</small>
-          <ul><li>Semua fitur</li><li>Paling hemat</li></ul><button class="btn" data-lic="checkout" data-plan="yearly" ${dis}>${esc(lbusy || 'Pilih Tahunan')}</button></div>`;
+          <ul><li>Semua fitur</li>${aiLine(p2)}<li>Paling hemat</li></ul><button class="btn" data-lic="checkout" data-plan="yearly" ${dis}>${esc(lbusy || 'Pilih Tahunan')}</button></div>`;
       return `<div class="pw">${head}<div class="plans">
         <div class="pl"><small>${esc(p1.label)}${off(p1) ? ' · hemat ' + off(p1) + '%' : ''}</small><div>${was(p1)}</div><b>${full(p1.price)}</b><small>per ${p1.days} hari</small>
-          <ul><li>Semua fitur</li><li>Perpanjang kapan saja</li></ul><button class="btn" data-lic="checkout" data-plan="monthly" ${dis}>${esc(lbusy || 'Pilih Bulanan')}</button></div>${yearBox}</div>
+          <ul><li>Semua fitur</li>${aiLine(p1)}<li>Perpanjang kapan saja</li></ul><button class="btn" data-lic="checkout" data-plan="monthly" ${dis}>${esc(lbusy || 'Pilih Bulanan')}</button></div>${yearBox}</div>
         ${wait}${err}<div class="meta">${esc(l.email || '')}<a data-lic="logout">Keluar</a></div></div>`;
     }
 
