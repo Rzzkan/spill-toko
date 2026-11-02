@@ -54,11 +54,14 @@
     return { price: Math.min.apply(null, all), priceMax: null };
   }
 
-  const SOLD_A = /(?<![\d.,])(\d[\d.,]*)\s*(rb|jt|k)?\s*(\+)?\s*terjual(\s*\/\s*bulan)?/i;
-  const SOLD_B = /terjual\s*(?:\/\s*bulan)?\s*:?\s*(\d[\d.,]*)\s*(rb|jt|k)?\s*(\+)?(\s*\/\s*bulan)?/i;
+  // Angka & kata "terjual" harus satu baris (jangan menyambar angka harga di baris sebelumnya).
+  const SOLD_A = /(?<![\d.,])(?<!Rp[ \t\u00a0]?)(\d[\d.,]*)[ \t\u00a0]*(rb|jt|k)?[ \t\u00a0]*(\+)?[ \t\u00a0]*terjual([ \t\u00a0]*\/[ \t\u00a0]*bulan)?/i;
+  // satuan (RB/JT) boleh berada di elemen terpisah dari kata "terjual"
+  const SOLD_A2 = /(?<![\d.,])(?<!Rp[ \t\u00a0]?)(\d[\d.,]*)[ \t\u00a0]*(rb|jt|k)[ \t\u00a0]*(\+)?\s*terjual(\s*\/\s*bulan)?/i;
+  const SOLD_B = /terjual[ \t\u00a0]*(?:\/\s*bulan)?\s*:?\s*(\d[\d.,]*)\s*(rb|jt|k)?\s*(\+)?(\s*\/\s*bulan)?/i;
 
   function parseSold(text) {
-    let m = text.match(SOLD_A);
+    let m = text.match(SOLD_A) || text.match(SOLD_A2);
     if (m) return { sold: parseCount(m[1], m[2]), plus: !!m[3], monthly: !!m[4] };
     m = text.match(SOLD_B);
     if (m) return { sold: parseCount(m[1], m[2]), plus: !!m[3], monthly: /bulan/i.test(m[0]) };
@@ -136,12 +139,27 @@
     return result;
   }
 
+  // Shopee sering memisahkan "Rp" dan angkanya ke elemen berbeda -> innerText memberi baris "Rp" lalu "150.000".
+  function mergeRp(lines) {
+    const out = [];
+    for (let i = 0; i < lines.length; i++) {
+      const l = lines[i];
+      if (/^Rp\.?$/i.test(l) && i + 1 < lines.length && /^\d/.test(lines[i + 1])) { out.push('Rp' + lines[i + 1]); i++; continue; }
+      out.push(l);
+    }
+    // rentang harga: "Rp120.000" / "-" / "Rp180.000" -> satu baris
+    for (let i = 1; i + 1 < out.length; i++) {
+      if (/^[-–—]$/.test(out[i]) && /^Rp/i.test(out[i - 1]) && /^(Rp)?\d/i.test(out[i + 1])) { out.splice(i - 1, 3, out[i - 1] + ' - ' + out[i + 1]); i--; }
+    }
+    return out;
+  }
+
   const LOC_BLOCK = /^(STAR|MALL|COD|XTRA|CHOICE|OFF|DISKON|TERJUAL)|ONGKIR|PROMO|TERLARIS|REKOMENDASI|IKLAN|CASHBACK|VOUCHER/;
   const NOT_NAME = /^(rp\s*\d|star\+?$|mall$|cod$|iklan$|ad$|xtra$|gratis ongkir|cashback|voucher|terlaris|pilihan|termurah|bayar di tempat)/i;
 
   function parseCard(card, ids) {
     const text = getText(card);
-    const lines = text.split(/\n+/).map(function (s) { return s.trim(); }).filter(Boolean);
+    const lines = mergeRp(text.split(/\n+/).map(function (s) { return s.trim(); }).filter(Boolean));
 
     const priceLines = lines.filter(function (l) {
       return /Rp/i.test(l) && !/diskon|cashback|voucher|ongkir|hemat|koin|\boff\b/i.test(l);
@@ -255,6 +273,10 @@
         const parsed = (group.length ? group : [first]).map(function (el) { return priceFromText(getText(el).trim()); });
         const best = parsed.reduce(function (a, b) { return b.price != null && (a.price == null || b.price < a.price) ? b : a; }, parsed[0]);
         price = best.price; priceMax = best.priceMax;
+      } else {
+        // "Rp" dan angka di elemen terpisah -> cari dari teks halaman bagian atas
+        const fb = priceFromText(flat.slice(0, 6000));
+        price = fb.price; priceMax = fb.priceMax;
       }
     }
 
