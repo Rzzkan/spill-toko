@@ -174,7 +174,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         if (!/^https:\/\/shopee\.co\.id\//.test(msg.url || '')) throw new Error('url');
         const sw = (msg.screen && msg.screen.w) || 1366, sh = (msg.screen && msg.screen.h) || 768;
         const W = 780, H = 600;
-        const win = await chrome.windows.create({ url: msg.url, type: 'popup', focused: false, width: W, height: H, left: Math.max(0, sw - W - 10), top: Math.max(0, sh - H - 10) });
+        const win = await chrome.windows.create({ url: msg.url, type: 'popup', focused: true, width: W, height: H, left: Math.max(0, sw - W - 10), top: Math.max(0, sh - H - 10) });
         const tab = win.tabs && win.tabs[0];
         const { job } = await LS.get('job');
         if (!job) throw new Error('job');

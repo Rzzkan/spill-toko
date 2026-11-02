@@ -382,6 +382,17 @@
       `https://shopee.co.id/shop/${sid}/search?page=0&sortBy=sales`);
   }
 
+  // Tunggu kartu produk dirender Shopee (halaman React lambat / jendela di latar belakang).
+  async function waitForProducts(ms) {
+    const t0 = Date.now();
+    while (Date.now() - t0 < ms) {
+      try { if (P.parseAll(document).length) return true; } catch (_) { /* ulangi */ }
+      window.scrollBy(0, 300);
+      await sleep(700);
+    }
+    return false;
+  }
+
   async function runJobStep() {
     const job = await S.getJob();
     if (!job || !job.active) return;
@@ -398,7 +409,7 @@
     setBusyAll(true, `Memindai ${job.done + 1}/${job.total}…`);
     ui.setStatus(`Halaman ${job.done + 1} dari ${job.total}… (jangan tutup ${inWin ? 'jendela ini' : 'tab'})`);
     let n = 0;
-    try { n = (await scanPage()).n; } catch (e) { ui.setStatus('Gagal: ' + e.message, 'err'); }
+    try { await waitForProducts(inWin ? 25000 : 8000); n = (await scanPage()).n; } catch (e) { ui.setStatus('Gagal: ' + e.message, 'err'); }
     const fresh = await S.getJob();
     if (!fresh || !fresh.active) { setBusyAll(false); closeRunner(); return; }   // dihentikan dari halaman asal
     job.done++; job.found = (job.found || 0) + n;
@@ -621,7 +632,8 @@
       lastSeen = key;
       setBusyAll(false);
       await refresh();
-      if (j.finished) { ui.setStatus(`Selesai ${j.done} halaman — ${j.found} produk terbaca.`, 'ok'); if (j.openModal) inline.openModal(); }
+      if (j.finished && !j.found) ui.setStatus('Scan selesai tetapi 0 produk terbaca di jendela scan (halaman belum termuat atau Shopee memblokir). Coba matikan opsi "Scan di jendela terpisah" di panel, lalu scan lagi, dan klik "Salin diagnosa".', 'err');
+      else if (j.finished) { ui.setStatus(`Selesai ${j.done} halaman — ${j.found} produk terbaca.`, 'ok'); if (j.openModal) inline.openModal(); }
       else if (j.blocked) ui.setStatus(`Shopee meminta verifikasi di jendela scan. Selesaikan di sana, lalu scan lagi. (${j.found} produk terbaca)`, 'err');
       else ui.setStatus(`Scan dihentikan${j.aborted ? ' (jendela scan ditutup)' : ''}. ${j.found || 0} produk terbaca.`, 'err');
     });
