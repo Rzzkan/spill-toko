@@ -71,7 +71,7 @@ async function getState(force) {
   if (!st.lic_token) return { enabled: true, state: 'signedout', access: false, plans: (st.lic_cache && st.lic_cache.plans) || null };
 
   let cache = st.lic_cache;
-  if (force || !cache || Date.now() - cache.fetchedAt > FRESH_MS) {
+  if (force || !cache || !cache.ai || Date.now() - cache.fetchedAt > FRESH_MS) {
     try {
       const r = await api('me');
       if (r.status === 200 && r.json.license) {

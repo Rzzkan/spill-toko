@@ -350,7 +350,10 @@
     function aiBody(k) {
       const info = L && L.ai;
       const box = (inner) => '<div class="body" style="display:block"><div class="aiempty">' + inner + '</div></div>';
-      if (!L || !L.enabled || !info) return box('Analisis AI membutuhkan akun dan server aktif.');
+      if (L && !L.enabled) return box('Paket <b>DEV tanpa login</b> tidak bisa memakai Analisis AI (AI butuh akun Google + server). Pakai paket tes yang wajib login.');
+      if (L && L.state === 'unconfigured') return box('Extension belum dikonfigurasi: isi <b>GOOGLE_CLIENT_ID</b> dan <b>LICENSE_PUBKEY</b> di src/config.js, lalu muat ulang extension.');
+      if (!L || !L.access) return box('Masuk dengan Google dan aktifkan langganan/trial untuk memakai Analisis AI.');
+      if (!info) return box('Info AI dari server belum termuat. Tutup lalu buka lagi kartu ini, atau cek koneksi ke server.');
       if (!info.enabled) return box('Analisis AI belum diaktifkan oleh admin.');
       const a = ai && ai.kind === k ? ai.st : { status: 'idle' };
       const quota = info.limit == null ? 'tanpa batas' : `${Math.max(0, info.limit - info.used)} dari ${info.limit}`;
