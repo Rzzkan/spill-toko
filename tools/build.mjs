@@ -1,5 +1,5 @@
 // Membuat paket extension siap upload ke Chrome Web Store.
-//   node tools/build.mjs --api https://spill.delova.id/api/index.php --client-id XXXX.apps.googleusercontent.com --pubkey BASE64
+//   node tools/build.mjs --api https://spill.delova.id/api --client-id XXXX.apps.googleusercontent.com --pubkey BASE64
 // (atau lewat env: SPILL_API, SPILL_CLIENT_ID, SPILL_PUBKEY). Hasil: dist/spill-toko-<versi>.zip
 // Paket: config.js diisi, field "key" dihapus dari manifest (Web Store memberi ID sendiri), tools/ & dev files tidak ikut.
 import fs from 'node:fs';
@@ -12,7 +12,7 @@ const arg = (n, env) => { const i = process.argv.indexOf('--' + n); return (i > 
 const API = arg('api', 'SPILL_API').trim(), CID = arg('client-id', 'SPILL_CLIENT_ID').trim(), PUB = arg('pubkey', 'SPILL_PUBKEY').trim();
 const fail = (m) => { console.error('GAGAL: ' + m); process.exit(1); };
 
-if (!/^https:\/\/[^\s'"]+$/.test(API)) fail('--api harus URL https, mis. https://spill.delova.id/api/index.php');
+if (!/^https:\/\/[^\s'"]+$/.test(API)) fail('--api harus URL https, mis. https://spill.delova.id/api');
 if (!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(CID)) fail('--client-id harus berakhiran .apps.googleusercontent.com');
 if (!/^[A-Za-z0-9+/]{43}=$/.test(PUB)) fail('--pubkey harus base64 32 byte (44 karakter, dari setup.sh / keygen.php)');
 

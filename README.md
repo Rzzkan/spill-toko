@@ -63,4 +63,4 @@ Di kartu inline ada tab **✨ Analisa AI** (produk, toko, pencarian). Data hasil
 
 
 ## Build paket Web Store
-`node tools/build.mjs --api https://DOMAIN/api/index.php --client-id XXX.apps.googleusercontent.com --pubkey LICENSE_PUBKEY` → `dist/spill-toko-<versi>.zip` (config terisi, field `key` dihapus). Panduan deploy server lengkap ada di repo `spill-toko-server` (`deploy/README.md`).
+`node tools/build.mjs --api https://DOMAIN/api --client-id XXX.apps.googleusercontent.com --pubkey LICENSE_PUBKEY` → `dist/spill-toko-<versi>.zip` (config terisi, field `key` dihapus). Panduan deploy server lengkap ada di repo `spill-toko-server` (`deploy/README.md`).

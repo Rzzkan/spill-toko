@@ -35,7 +35,9 @@ async function api(route, opts) {
     const { lic_token } = await LS.get('lic_token');
     if (lic_token) headers.Authorization = 'Bearer ' + lic_token;
   }
-  const res = await fetch(CFG.API_BASE + '?r=' + route, {
+  // Rute bersih (/api/auth, /api/me, ...). API_BASE lama berakhiran /index.php otomatis dikonversi.
+  const base = String(CFG.API_BASE).replace(/\/index\.php\/?$/, '').replace(/\/$/, '');
+  const res = await fetch(base + '/' + route, {
     method: opts.method || 'GET', headers, body: opts.body ? JSON.stringify(opts.body) : undefined
   });
   let json = null;
@@ -120,7 +122,7 @@ async function login() {
     if (!idToken) throw new Error('Login Google dibatalkan');
   }
   const r = await api('auth', { method: 'POST', body: { id_token: idToken, nonce: nonce }, auth: false });
-  if (r.status !== 200) throw new Error(r.json.error || 'Login gagal');
+  if (r.status !== 200) throw new Error(r.json.error || ('Login gagal — server membalas HTTP ' + r.status + (r.status === 404 || r.status === 405 ? ' (cek API_BASE & versi server)' : '')));
   await LS.set({ lic_token: r.json.token, lic_cache: { license: r.json.license, plans: r.json.plans, ai: r.json.ai || null, fetchedAt: Date.now() } });
   return getState(false);
 }
