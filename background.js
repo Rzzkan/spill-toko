@@ -37,7 +37,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 // ---------- API ----------
 async function api(route, opts) {
   opts = opts || {};
-  const headers = { Accept: 'application/json' };
+  const headers = { Accept: 'application/json', 'X-App': 'shofee' };
   if (opts.body) headers['Content-Type'] = 'application/json';
   if (opts.auth !== false) {
     const { lic_token } = await LS.get('lic_token');
