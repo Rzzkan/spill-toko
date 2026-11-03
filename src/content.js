@@ -388,7 +388,7 @@
   async function waitForProducts(ms) {
     const t0 = Date.now();
     while (Date.now() - t0 < ms) {
-      try { if (P.parseAll(document).length) return true; } catch (_) { /* ulangi */ }
+      try { if (apiSeen || P.parseAll(document).length) return true; } catch (_) { /* ulangi */ }
       window.scrollBy(0, 300);
       await sleep(700);
     }
@@ -428,7 +428,7 @@
         n = (await saveDetail()) ? 1 : 0;
         await refresh();
         job.result = { detail: detail, competitors: competitors };
-      } else n = (await scanPage()).n;
+      } else { n = (await scanPage()).n; if (!n && apiSeen) n = apiSeen; }
       if (!n && inWin) { try { await chrome.storage.local.set({ last_diag: { at: Date.now(), d: P.diagnose(document) } }); } catch (_) { /* abaikan */ } }
     } catch (e) { ui.setStatus('Gagal: ' + e.message, 'err'); }
     const fresh = await S.getJob();
@@ -622,6 +622,41 @@
     ui.setStatus('Koleksi dihapus.', 'ok');
   }
 
+  // ---------- data dari API Shopee (dibaca oleh hook.js di dunia halaman) ----------
+  let apiSeen = 0, apiTimer = null;
+  const okKey = (k) => typeof k === 'string' && /^\d{1,20}\.\d{1,20}$/.test(k);
+  const cleanCard = (c) => {
+    if (!c || !okKey(c.key)) return null;
+    const n = (x) => (typeof x === 'number' && isFinite(x) ? x : null), t = (x, l) => (typeof x === 'string' ? x.slice(0, l) : '');
+    return { key: c.key, shopId: c.key.split('.')[0], itemId: c.key.split('.')[1], url: 'https://shopee.co.id/product/' + c.key.split('.')[0] + '/' + c.key.split('.')[1],
+      name: t(c.name, 200), image: /^https:\/\//.test(c.image || '') ? t(c.image, 300) : '', price: n(c.price), priceMax: n(c.priceMax),
+      sold: n(c.sold), soldMonthly: false, soldPlus: false, api30: n(c.api30), omzet: n(c.omzet), rating: n(c.rating), ratingCount: n(c.ratingCount),
+      favorit: n(c.favorit), location: t(c.location, 60), shopName: t(c.shopName, 80), discount: n(c.discount), ctime: n(c.ctime), via: 'api' };
+  };
+  function setupApiIngest() {
+    setTimeout(() => window.postMessage({ __spill: 'ready' }, location.origin), 300);
+    window.addEventListener('message', async (ev) => {
+      const d = ev.data;
+      if (ev.source !== window || !d || d.__spill !== 'api' || !lic.access) return;   // wajib login & langganan aktif
+      try {
+        const recs = (Array.isArray(d.cards) ? d.cards.slice(0, 400) : []).map(cleanCard).filter(Boolean);
+        if (d.pdp && okKey(d.pdp.key)) {
+          const p = d.pdp, n = (x) => (typeof x === 'number' && isFinite(x) ? x : null);
+          const rec = { key: p.key, shopId: p.key.split('.')[0], itemId: p.key.split('.')[1], url: 'https://shopee.co.id/product/' + p.key.split('.')[0] + '/' + p.key.split('.')[1],
+            name: typeof p.name === 'string' ? p.name.slice(0, 200) : '', price: n(p.price), priceMax: n(p.priceMax), rating: n(p.rating), ratingCount: n(p.ratingCount), favorit: n(p.favorit), ctime: n(p.ctime) };
+          if (n(p.soldExact) != null) { rec.sold = p.soldExact; rec.soldMonthly = false; rec.soldPlus = false; rec.via = 'api'; }
+          recs.push(rec);
+        }
+        if (!recs.length) return;
+        await S.upsert(recs, { source: sourceLabel() });
+        apiSeen += recs.length;
+        recs.forEach((r) => pageKeys.add(r.key));
+        clearTimeout(apiTimer);
+        apiTimer = setTimeout(() => { refresh(); }, 700);
+      } catch (e) { console.warn('[Spill Toko] api', e); }
+    });
+  }
+
   // ---------- init ----------
   function scheduleInitialRender() {
     // halaman Shopee dirender bertahap: coba beberapa kali sampai data terbaca
@@ -657,6 +692,7 @@
       onAnalyze, onRefresh, onAi, onPanel: () => ui.toggle(true), onMulti, onLicense,
       getRows: getRows, onDownload: (rows) => onExport(rows)
     });
+    setupApiIngest();
     chrome.runtime.onMessage.addListener((msg) => { if (msg && msg.type === 'toggle') ui.toggle(); });
     ui.setPageType(type());
     await refreshLicense(false);

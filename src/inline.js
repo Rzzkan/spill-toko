@@ -195,8 +195,22 @@
         anchor.insertAdjacentElement(a.pos, host);
       }
       placedKind = payload.kind;
+      fitWidth(a.el);
       return true;
     }
+
+    // Halaman toko: samakan lebar kartu dengan kontainer konten Shopee (tab Halaman Utama/Produk/...), seperti Tokpee.
+    let fitRef = null;
+    function fitWidth(ref) {
+      if (ref) fitRef = ref;
+      if (!host || !fitRef || !payload || payload.kind !== 'shop') return;
+      const r = fitRef.getBoundingClientRect();
+      const vw = document.documentElement.clientWidth;
+      if (r.width < 600 || r.width > vw - 8) { host.style.cssText = HOST_CSS; return; }
+      const w = Math.min(Math.round(r.width + 22), vw - 24);   // sedikit lebih lebar dari bar tab, sama seperti kartu Tokpee
+      host.style.cssText = HOST_CSS.replace('width:100%;', 'width:' + w + 'px;').replace('flex:0 0 100%;', 'flex:0 0 ' + w + 'px;') + 'margin:12px auto;';
+    }
+    window.addEventListener('resize', () => fitWidth());
 
     setInterval(() => { if (payload && !host.isConnected) place(); }, 1500);
 
@@ -297,7 +311,7 @@
       return '<div class="body" style="padding:14px 0 6px"><div class="sec"><h5>Informasi Umum</h5>' + sec1 + '</div><div class="sec"><h5>Trend</h5>' + sec2 +
         '</div><div class="sec"><h5>Potensi dan Performa</h5>' + sec3 + '</div><div class="sec"><h5>Statistik Total</h5>' + sec4 + '</div>' + actRow() +
         '<div class="note" style="margin:0 14px 8px">Total terjual dibulatkan Shopee (mis. “10RB+”), jadi total omset adalah batas bawah. ' +
-        (d.rate && d.rate.est ? 'Angka 30 hari adalah <b>estimasi kasar</b> dari tanggal ulasan (' + d.rate.recent + ' dari ' + d.rate.sample + ' ulasan sampel dalam 30 hari terakhir; sampel ulasan Shopee tidak berurutan waktu, jadi bisa meleset); lebih akurat setelah produk di-scan lagi di hari berbeda.' : 'Data 30 hari terisi setelah produk ini di-scan lagi di hari berbeda.') +
+        (d.rate && d.rate.api ? 'Angka terjual 30 hari dan total terjual berasal dari data Shopee (angka pasti, bukan estimasi).' : d.rate && d.rate.est ? 'Angka 30 hari adalah <b>estimasi kasar</b> dari tanggal ulasan (' + d.rate.recent + ' dari ' + d.rate.sample + ' ulasan sampel dalam 30 hari terakhir; sampel ulasan Shopee tidak berurutan waktu, jadi bisa meleset); lebih akurat setelah produk di-scan lagi di hari berbeda.' : 'Data 30 hari terisi setelah produk ini di-scan lagi di hari berbeda.') +
         '</div></div>';
     }
 

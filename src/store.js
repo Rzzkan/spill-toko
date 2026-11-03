@@ -13,8 +13,15 @@
       const items = await Store.items();
       const now = Date.now();
       let added = 0, updated = 0;
-      records.forEach(function (r) {
-        const old = items[r.key];
+      records.forEach(function (r0) {
+        const old = items[r0.key];
+        let r = r0;
+        // data dari API Shopee (angka pasti) tidak ditimpa angka tampilan yang dibulatkan dari DOM
+        if (r0.via === 'api') { r = Object.assign({}, r0, { apiAt: now }); if (r.api30 != null) r.api30At = now; }
+        else if (old && old.apiAt && now - old.apiAt < 6 * 36e5) {
+          r = Object.assign({}, r0);
+          ['sold', 'soldMonthly', 'soldPlus', 'omzet', 'price', 'priceMax'].forEach(function (k) { delete r[k]; });
+        }
         const hist = (old && old.hist) ? old.hist.slice() : [];
         if (r.sold != null) {
           const last = hist[hist.length - 1];
@@ -57,6 +64,8 @@
     // estimasi penjualan 30 hari dari riwayat scan (atau angka "/bulan" bila Shopee menampilkannya)
     rate30(item) {
       if (item.sold == null) return null;
+      const mid0 = item.priceMax && item.price != null ? (item.price + item.priceMax) / 2 : item.price;
+      if (item.api30 != null) return { sold: item.api30, omzet: mid0 != null ? item.api30 * mid0 : null, api: true };
       const mid = item.priceMax && item.price != null ? (item.price + item.priceMax) / 2 : item.price;
       if (item.soldMonthly) return { sold: item.sold, omzet: mid != null ? item.sold * mid : null };
       const h = item.hist || [];

@@ -1,0 +1,18 @@
+// Uji: data API tidak ditimpa angka DOM yang dibulatkan, dan rate30 memakai api30. node tools/test-store-api.js
+let data = {};
+global.chrome = { storage: { local: { get: async (k) => (typeof k === 'string' ? { [k]: data[k] } : data), set: async (o) => { Object.assign(data, o); }, remove: async (k) => { delete data[k]; } } } };
+global.self = global;
+require('../src/store.js');
+const S = global.SpillStore;
+let fail = 0; const eq = (n, g, w) => { const ok = JSON.stringify(g) === JSON.stringify(w); if (!ok) fail++; console.log((ok ? 'OK   ' : 'FAIL ') + n, ok ? '' : JSON.stringify(g) + ' != ' + JSON.stringify(w)); };
+(async () => {
+  await S.upsert([{ key: '1.2', shopId: '1', itemId: '2', name: 'A', price: 100000, sold: 3126, api30: 63, omzet: 312600000, via: 'api' }], { source: 't' });
+  await S.upsert([{ key: '1.2', shopId: '1', itemId: '2', name: 'A', price: 100000, sold: 3000, soldPlus: true, omzet: 300000000 }], { source: 'dom' });
+  const it = (await S.items())['1.2'];
+  eq('sold pasti tidak ditimpa DOM', it.sold, 3126);
+  eq('rate30 dari API', S.rate30(it), { sold: 63, omzet: 6300000, api: true });
+  await S.upsert([{ key: '9.9', shopId: '9', itemId: '9', name: 'B', price: 50000, sold: 500 }], { source: 'dom' });
+  eq('tanpa API: DOM tetap masuk', (await S.items())['9.9'].sold, 500);
+  eq('tanpa API & riwayat: rate30 null', S.rate30((await S.items())['9.9']), null);
+  if (fail) process.exit(1); console.log('Semua lolos');
+})();
