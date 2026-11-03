@@ -412,9 +412,22 @@
     ui.setStatus(`Halaman ${job.done + 1} dari ${job.total}… (jangan tutup ${inWin ? 'jendela ini' : 'tab'})`);
     let n = 0;
     try {
-      let ok = await waitForProducts(inWin ? 20000 : 8000);
-      if (!ok && inWin) { send({ type: 'spill-show-runner' }); ok = await waitForProducts(20000); }   // tab latar belakang tak dirender Chrome -> tampilkan sebentar
-      n = (await scanPage()).n;
+      if (job.kind !== 'product') {
+        let ok = await waitForProducts(inWin ? 20000 : 8000);
+        if (!ok && inWin) { send({ type: 'spill-show-runner' }); ok = await waitForProducts(20000); }
+      }   // tab latar belakang tak dirender Chrome -> tampilkan sebentar
+      if (job.kind === 'product') {
+        // halaman produk: tunggu harga muncul, gulir untuk memuat varian/ulasan/produk serupa, lalu baca detail
+        const t0 = Date.now();
+        while (Date.now() - t0 < 20000 && P.parseProductPage(document, location.href).price == null) { window.scrollBy(0, 250); await sleep(700); }
+        if (inWin && P.parseProductPage(document, location.href).price == null) { send({ type: 'spill-show-runner' }); await sleep(8000); }
+        await scrollThrough(null, 12000);
+        window.scrollTo(0, 0); await sleep(400);
+        readDetail();
+        n = (await saveDetail()) ? 1 : 0;
+        await refresh();
+        job.result = { detail: detail, competitors: competitors };
+      } else n = (await scanPage()).n;
       if (!n && inWin) { try { await chrome.storage.local.set({ last_diag: { at: Date.now(), d: P.diagnose(document) } }); } catch (_) { /* abaikan */ } }
     } catch (e) { ui.setStatus('Gagal: ' + e.message, 'err'); }
     const fresh = await S.getJob();
@@ -501,6 +514,10 @@
     if (busy) return;
     if (!guard()) return;
     cancelled = false; setBusyAll(true, 'Membaca…');
+    if (await useWindow()) {   // dibaca di tab latar belakang: halaman ini tidak bergulir
+      await startJob({ total: 1, kind: 'product', openModal: false }, location.origin + location.pathname);
+      return;
+    }
     ui.setStatus('Scroll untuk memuat varian, ulasan & produk serupa…');
     try {
       await scrollThrough(null, 12000);
@@ -634,16 +651,17 @@
       if (area !== 'local' || !ch.job) return;
       const j = ch.job.newValue;
       if (!j || j.mode !== 'window' || myTabId == null || j.originTabId !== myTabId) return;
-      if (j.active) { setBusyAll(true, `Memindai ${Math.min(j.done + 1, j.total)}/${j.total} (jendela lain)…`); ui.setStatus(`Jendela scan: ${j.done}/${j.total} halaman, ${j.found || 0} produk terbaca.`); return; }
+      if (j.active) { setBusyAll(true, `Memindai ${Math.min(j.done + 1, j.total)}/${j.total} (tab latar belakang)…`); ui.setStatus(`Tab scan: ${j.done}/${j.total} halaman, ${j.found || 0} produk terbaca.`); return; }
       const key = j.startedAt + ':' + (j.finished ? 'f' : j.blocked ? 'b' : 'x');
       if (key === lastSeen) return;
       lastSeen = key;
       setBusyAll(false);
+      if (j.kind === 'product' && j.result && j.result.detail) { detail = j.result.detail; competitors = j.result.competitors || []; ui.setDetail(detail); }
       await refresh();
-      if (j.finished && !j.found) ui.setStatus('Scan selesai tetapi 0 produk terbaca di jendela scan (halaman belum termuat atau Shopee memblokir). Coba matikan opsi "Scan di jendela terpisah" di panel, lalu scan lagi, dan klik "Salin diagnosa".', 'err');
+      if (j.finished && !j.found) ui.setStatus('Scan selesai tetapi tidak ada data terbaca di tab scan (halaman belum termuat atau Shopee meminta verifikasi). Klik "Salin diagnosa" di panel Spill Toko lalu kirim ke developer.', 'err');
       else if (j.finished) { ui.setStatus(`Selesai ${j.done} halaman — ${j.found} produk terbaca.`, 'ok'); if (j.openModal) inline.openModal(); }
-      else if (j.blocked) ui.setStatus(`Shopee meminta verifikasi di jendela scan. Selesaikan di sana, lalu scan lagi. (${j.found} produk terbaca)`, 'err');
-      else ui.setStatus(`Scan dihentikan${j.aborted ? ' (jendela scan ditutup)' : ''}. ${j.found || 0} produk terbaca.`, 'err');
+      else if (j.blocked) ui.setStatus(`Shopee meminta verifikasi di tab scan. Selesaikan di sana, lalu scan lagi. (${j.found} produk terbaca)`, 'err');
+      else ui.setStatus(`Scan dihentikan${j.aborted ? ' (tab scan ditutup)' : ''}. ${j.found || 0} produk terbaca.`, 'err');
     });
 
     // lanjutkan job multi-halaman setelah halaman baru termuat
