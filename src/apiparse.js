@@ -24,7 +24,7 @@
     // skema lama (item_basic)
     if (o.historical_sold != null || o.price_min != null) {
       if (sold == null) sold = num(o.historical_sold);
-      if (api30 == null) api30 = num(o.sold);
+      // catatan: item_basic.sold (skema lama) sudah tidak berisi penjualan 30 hari (selalu 0), jadi tidak dipakai
       if (price == null && num(o.price_min) != null) price = o.price_min / UNIT;
       if (num(o.price_max) != null && o.price_max > o.price_min) priceMax = o.price_max / UNIT;
       if (price == null && num(o.price) != null) price = o.price / UNIT;

@@ -26,7 +26,7 @@
         if (r.sold != null) {
           const last = hist[hist.length - 1];
           if (!last || last.sold !== r.sold || last.m !== r.soldMonthly) {
-            hist.push({ t: now, sold: r.sold, m: !!r.soldMonthly });
+            hist.push({ t: now, sold: r.sold, m: !!r.soldMonthly, x: r0.via === 'api' });
             if (hist.length > 20) hist.shift();
           }
         }
@@ -68,7 +68,7 @@
       if (item.api30 != null) return { sold: item.api30, omzet: mid0 != null ? item.api30 * mid0 : null, api: true };
       const mid = item.priceMax && item.price != null ? (item.price + item.priceMax) / 2 : item.price;
       if (item.soldMonthly) return { sold: item.sold, omzet: mid != null ? item.sold * mid : null };
-      const h = item.hist || [];
+      const h = (item.hist || []).filter(function (e) { return e.x; });   // hanya angka pasti dari API (angka DOM dibulatkan)
       const est = function () { const e = item.est30; return e ? { sold: e.sold, omzet: e.omzet, est: true, sample: e.sample, recent: e.recent } : null; };
       if (!h.length) return est();
       const end = item.lastSeen || h[h.length - 1].t;
@@ -84,11 +84,12 @@
 
     // laju terjual interval terakhir vs interval sebelumnya (butuh >=3 titik riwayat)
     trend(item) {
-      const h = item.hist || [];
+      const h = (item.hist || []).filter(function (e) { return e.x; });
       const n = h.length;
       if (n < 3) return null;
       const c = h[n - 1], p = h[n - 2], q = h[n - 3];
       if (c.m !== p.m || p.m !== q.m) return null;
+      if (c.sold < p.sold || p.sold < q.sold) return null;
       const cur = (c.sold - p.sold) / Math.max(0.5, (c.t - p.t) / 864e5);
       const prev = (p.sold - q.sold) / Math.max(0.5, (p.t - q.t) / 864e5);
       return { cur: cur, prev: prev };

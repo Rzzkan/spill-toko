@@ -121,7 +121,12 @@ async function login() {
     idToken = new URLSearchParams(new URL(resp).hash.slice(1)).get('id_token');
     if (!idToken) throw new Error('Login Google dibatalkan');
   }
-  const r = await api('auth', { method: 'POST', body: { id_token: idToken, nonce: nonce }, auth: false });
+  let { lic_device } = await LS.get('lic_device');
+  if (!lic_device) { lic_device = (crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(16) + Math.random().toString(16).slice(2) + '0000000000000000')); await LS.set({ lic_device: lic_device }); }
+  const ua = navigator.userAgent || '';
+  const bn = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : 'Chrome';
+  const os = /Windows/.test(ua) ? 'Windows' : /Mac OS/.test(ua) ? 'macOS' : /Android/.test(ua) ? 'Android' : /Linux/.test(ua) ? 'Linux' : '';
+  const r = await api('auth', { method: 'POST', body: { id_token: idToken, nonce: nonce, device_id: lic_device, device_name: bn + (os ? ' · ' + os : '') }, auth: false });
   if (r.status !== 200) throw new Error(r.json.error || ('Login gagal — server membalas HTTP ' + r.status + (r.status === 404 || r.status === 405 ? ' (cek API_BASE & versi server)' : '')));
   await LS.set({ lic_token: r.json.token, lic_cache: { license: r.json.license, plans: r.json.plans, ai: r.json.ai || null, fetchedAt: Date.now() } });
   return getState(false);

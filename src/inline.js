@@ -234,8 +234,8 @@
       if (tab === 'ringkasan') {
         const has30 = s && s.have30;
         return [['Rentang Harga', s ? rangeTxt(s.priceMin, s.priceMax) : '–'],
-          [has30 ? 'Terjual 30 hari' : 'Terjual (sesuai tampilan)', s ? cnt(has30 ? s.sold30 : s.basisSold) + (has30 ? pctTxt(s.soldTrend) : '') : '–'],
-          [has30 ? 'Omset 30 hari' : 'Omset (sesuai tampilan)', s ? full(has30 ? s.omzet30 : s.basisOmzet) + (has30 ? pctTxt(s.omzetTrend) : '') : '–']];
+          [has30 ? 'Terjual 30 hari' : 'Terjual (sesuai tampilan)', s ? cnt(has30 ? s.sold30 : s.basisSold) + (has30 ? pctTxt(s.soldTrend) + (s.have30 < s.count ? ' · ' + s.have30 + '/' + s.count + ' produk' : '') : '') : '–'],
+          [has30 ? 'Omset 30 hari' : 'Omset (sesuai tampilan)', s ? full(has30 ? s.omzet30 : s.basisOmzet) + (has30 ? pctTxt(s.omzetTrend) + (s.have30 < s.count ? ' · ' + s.have30 + '/' + s.count + ' produk' : '') : '') : '–']];
       }
       return null;
     }

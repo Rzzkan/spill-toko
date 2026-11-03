@@ -34,7 +34,7 @@ eq('toko: nama toko', s[0].shopName, 'Delova');
 // skema lama item_basic
 const legacy = { items: [{ item_basic: { itemid: 7, shopid: 8, name: 'Legacy', historical_sold: 50, sold: 9, price_min: 10000000000, price_max: 20000000000 } }] };
 const l = A.cards(legacy);
-eq('lama: field', [l[0].key, l[0].sold, l[0].api30, l[0].price, l[0].priceMax], ['8.7', 50, 9, 100000, 200000]);
+eq('lama: field (30 hari tidak dipakai)', [l[0].key, l[0].sold, l[0].api30, l[0].price, l[0].priceMax], ['8.7', 50, null, 100000, 200000]);
 
 // pdp
 const pdp = A.pdp({ data: { item: { item_id: 22473207972, shop_id: 198876985, title: 'Obi', ctime: 1689005332 },

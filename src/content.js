@@ -302,6 +302,35 @@
   }
 
   // ---------- scan ----------
+  // ---------- cache hasil scan ----------
+  // Halaman yang sudah dipindai dalam beberapa jam terakhir tidak dipindai ulang (kecuali tombol Refresh / scan manual dari panel).
+  const CACHE_TTL = 6 * 3600e3;
+  const cacheKeyOf = (u) => {
+    try {
+      const x = new URL(u, location.href);
+      const keep = ['keyword', 'page', 'sortBy', 'shop', 'shopCollection', 'category', 'by', 'facet', 'minPrice', 'maxPrice', 'locations', 'newest'];
+      const q = keep.filter((k) => x.searchParams.has(k)).map((k) => k + '=' + x.searchParams.get(k)).join('&');
+      return x.pathname.replace(/\/$/, '') + (q ? '?' + q : '');
+    } catch (_) { return String(u); }
+  };
+  async function cacheGet(u) {
+    try {
+      const o = (await chrome.storage.local.get('scan_cache')).scan_cache || {};
+      const e = o[cacheKeyOf(u)];
+      return e && Date.now() - e.t < CACHE_TTL ? e : null;
+    } catch (_) { return null; }
+  }
+  async function cachePut(u, n) {
+    try {
+      const o = (await chrome.storage.local.get('scan_cache')).scan_cache || {};
+      o[cacheKeyOf(u)] = { t: Date.now(), n: n };
+      const ks = Object.keys(o);
+      if (ks.length > 300) ks.sort((a, b) => o[a].t - o[b].t).slice(0, ks.length - 300).forEach((k) => delete o[k]);
+      await chrome.storage.local.set({ scan_cache: o });
+    } catch (_) { /* abaikan */ }
+  }
+  const agoTxt = (t) => { const m = Math.max(1, Math.round((Date.now() - t) / 60000)); return m < 60 ? m + ' menit lalu' : Math.round(m / 60) + ' jam lalu'; };
+
   async function scanPage() {
     const bag = new Map();
     collectInto(bag);
@@ -312,6 +341,7 @@
     if (recs.length) {
       const res = await S.upsert(recs, { source: sourceLabel() });
       recs.forEach((r) => pageKeys.add(r.key));
+      await cachePut(location.href, recs.length);
       await refresh();
       return { n: recs.length, res };
     }
@@ -322,9 +352,18 @@
     if (busy) return 0;
     if (!guard()) return 0;
     if (P.isBlockedPage(location)) { ui.setStatus('Shopee meminta verifikasi/login. Selesaikan dulu secara manual.', 'err'); return 0; }
+    if (!(opts && opts.force)) {
+      const c = await cacheGet(location.href);
+      if (c) {
+        await refresh();
+        ui.setStatus(`Memakai data tersimpan (${agoTxt(c.t)}, ${c.n} produk). Klik Refresh untuk memindai ulang.`, 'ok');
+        if (opts && opts.openModal) inline.openModal();
+        return c.n;
+      }
+    }
     if (await useWindow()) {   // scan di jendela terpisah: halaman ini tidak bergulir/berpindah
       setBusyAll(true, 'Memindai di tab latar belakang…');
-      await startJob({ total: 1, openModal: !!(opts && opts.openModal) }, null);
+      await startJob({ total: 1, openModal: !!(opts && opts.openModal), force: !!(opts && opts.force) }, null);
       return 0;
     }
     cancelled = false; setBusyAll(true, 'Memindai…');
@@ -379,8 +418,17 @@
     // Halaman pencarian toko (/shop/ID/search) memicu captcha anti-bot Shopee, jadi yang dipindai adalah halaman toko biasa
     // (produk unggulan/terlaris/terbaru yang dirender Shopee di sana). Paginasi tab "Produk" bisa dipindai manual lewat tombol Scan.
     const shopUrl = location.origin + location.pathname.replace(/\/(search|\w+_list)$/, '');
+    if (!force) {
+      const c = await cacheGet(shopUrl);
+      if (c && allItems.some((i) => i.shopId === sid)) {
+        await refresh();
+        ui.setStatus(`Memakai data tersimpan (${agoTxt(c.t)}). Klik Refresh untuk memindai ulang.`, 'ok');
+        inline.openModal();
+        return;
+      }
+    }
     setBusyAll(true, 'Memindai…');
-    await startJob({ total: 1, kind: 'shop', shopId: sid, returnUrl: location.href, openModal: !force }, shopUrl);
+    await startJob({ total: 1, kind: 'shop', shopId: sid, returnUrl: location.href, openModal: !force, force: !!force }, shopUrl);
   }
 
 
@@ -411,7 +459,13 @@
     setBusyAll(true, `Memindai ${job.done + 1}/${job.total}…`);
     ui.setStatus(`Halaman ${job.done + 1} dari ${job.total}… (jangan tutup ${inWin ? 'jendela ini' : 'tab'})`);
     let n = 0;
+    const hit = job.force ? null : await cacheGet(location.href);
     try {
+      if (hit) {
+        n = hit.n;
+        if (job.kind === 'product') { readDetail(); job.result = { detail: detail, competitors: competitors }; }
+        ui.setStatus(`Halaman ini sudah dipindai (${agoTxt(hit.t)}) — memakai data tersimpan.`);
+      } else {
       if (job.kind !== 'product') {
         let ok = await waitForProducts(inWin ? 20000 : 8000);
         if (!ok && inWin) { send({ type: 'spill-show-runner' }); ok = await waitForProducts(20000); }
@@ -429,6 +483,8 @@
         await refresh();
         job.result = { detail: detail, competitors: competitors };
       } else { n = (await scanPage()).n; if (!n && apiSeen) n = apiSeen; }
+      if (job.kind === 'product' && n) await cachePut(location.href, n);
+      }
       if (!n && inWin) { try { await chrome.storage.local.set({ last_diag: { at: Date.now(), d: P.diagnose(document) } }); } catch (_) { /* abaikan */ } }
     } catch (e) { ui.setStatus('Gagal: ' + e.message, 'err'); }
     const fresh = await S.getJob();
@@ -530,16 +586,25 @@
     if (!guard()) return;
     if (kind === 'product') return readAndSave();
     if (kind === 'shop') return onShopAnalyze(true);
-    const n = await onScan({ openModal: !!fromModal });
+    const n = await onScan({ openModal: !!fromModal, force: true });
     if (n && fromModal) inline.refreshModal();
   }
 
-  async function onProductAnalyze() {
+  async function onProductAnalyze(force) {
     if (busy) return;
     if (!guard()) return;
+    if (!force) {
+      const c = await cacheGet(location.href);
+      const d0 = P.parseProductPage(document, location.href);
+      if (c && d0 && d0.key && allItems.some((i) => i.key === d0.key)) {
+        readDetail(); await refresh();
+        ui.setStatus(`Memakai data tersimpan (${agoTxt(c.t)}). Klik Refresh untuk membaca ulang.`, 'ok');
+        return;
+      }
+    }
     cancelled = false; setBusyAll(true, 'Membaca…');
     if (await useWindow()) {   // dibaca di tab latar belakang: halaman ini tidak bergulir
-      await startJob({ total: 1, kind: 'product', openModal: false }, location.origin + location.pathname);
+      await startJob({ total: 1, kind: 'product', openModal: false, force: !!force }, location.origin + location.pathname);
       return;
     }
     ui.setStatus('Scroll untuk memuat varian, ulasan & produk serupa…');
@@ -618,7 +683,7 @@
   }
 
   async function onClear() {
-    await S.clear(); pageKeys = new Set(); await refresh();
+    await S.clear(); try { await chrome.storage.local.remove('scan_cache'); } catch (_) { /* abaikan */ } pageKeys = new Set(); await refresh();
     ui.setStatus('Koleksi dihapus.', 'ok');
   }
 
@@ -687,7 +752,7 @@
   }
 
   async function init() {
-    ui = SpillUI.mount({ onScan: () => onScan(), onMulti, onStop, onAnalyze: onProductAnalyze, onSaveDetail, onExport, onCopy, onClear, onDiag, onLicense });
+    ui = SpillUI.mount({ onScan: () => onScan({ force: true }), onMulti, onStop, onAnalyze: () => onProductAnalyze(true), onSaveDetail, onExport, onCopy, onClear, onDiag, onLicense });
     inline = SpillInline.create({
       onAnalyze, onRefresh, onAi, onPanel: () => ui.toggle(true), onMulti, onLicense,
       getRows: getRows, onDownload: (rows) => onExport(rows)
