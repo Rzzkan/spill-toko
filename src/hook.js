@@ -28,6 +28,28 @@
     } catch (_) { /* jangan pernah mengganggu halaman */ }
   }
 
+  // Halaman produk memuat datanya langsung di HTML (<script type="text/mfe-initial-data">), tanpa permintaan API terpisah.
+  // Dibaca dari DOM saja (tidak ada permintaan baru ke server). Stok di sana hanya pratinjau (dibatasi), jadi tidak dipakai.
+  function readInitial() {
+    try {
+      if (!window.SpillApi) return;
+      const el = document.querySelector('script[type="text/mfe-initial-data"]');
+      if (!el || !el.textContent || el.textContent.length > 6e6) return;
+      const st = JSON.parse(el.textContent).initialState;
+      const map = st && st.DOMAIN_PDP && st.DOMAIN_PDP.data && st.DOMAIN_PDP.data.PDP_BFF_DATA && st.DOMAIN_PDP.data.PDP_BFF_DATA.cachedMap;
+      if (!map) return;
+      const m = /-i\.(\d+)\.(\d+)/.exec(location.pathname) || /\/product\/(\d+)\/(\d+)/.exec(location.pathname);
+      const entry = m && map[m[1] + '/' + m[2]];
+      const pdp = entry ? window.SpillApi.pdp({ data: entry }) : null;
+      if (!pdp) return;
+      pdp.stock = null; pdp.variantSales = null; pdp.soldExact = null;
+      const msg = { __spill: 'api', path: 'ssr', cards: [], pdp: pdp };
+      queue.push(msg);
+      window.postMessage(msg, location.origin);
+    } catch (_) { /* abaikan */ }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', readInitial); else readInitial();
+
   const of = window.fetch;
   if (typeof of === 'function') {
     window.fetch = function () {

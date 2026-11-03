@@ -49,6 +49,8 @@ const pv = A.pdp({ data: { item: { item_id: 2, shop_id: 1, title: 'V', stock: 14
   models: [{ extinfo: { tier_index: [0, 0] }, sold: 30, normal_stock: 5 }, { extinfo: { tier_index: [0, 1] }, sold: 70, normal_stock: 5 }] } } });
 eq('pdp: stok', pv.stock, 1483);
 eq('pdp: varian %', JSON.stringify(pv.variantSales), JSON.stringify([{ name: 'Warna', opts: [{ o: 'Pink', sold: 100 }] }, { name: 'Ukuran', opts: [{ o: '100', sold: 30 }, { o: '110', sold: 70 }] }]));
+const ssr = A.pdp({ data: { item: { item_id: 25082469347, shop_id: 33464234, title: 'SSR', ctime: 1718870970, stock: null, historical_sold: null, models: [{ stock: 10, sold: null, normal_stock: null }] }, product_price: null, product_review: { historical_sold: null, historical_sold_display: '1RB+', rating_star: null } } });
+eq('pdp SSR (banyak null): ctime & tanpa galat', [ssr.key, ssr.ctime, ssr.soldExact, ssr.soldDisplay, ssr.price], ['33464234.25082469347', 1718870970, null, '1RB+', null]);
 const pv2 = A.pdp({ data: { item: { item_id: 3, shop_id: 1, title: 'W', models: [{ normal_stock: 4 }, { normal_stock: 6 }] } } });
 eq('pdp: stok dari jumlah model, tanpa varian', [pv2.stock, pv2.variantSales], [10, null]);
 if (fail) { console.log(fail + ' GAGAL'); process.exit(1); } console.log('Semua lolos');

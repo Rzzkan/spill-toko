@@ -162,9 +162,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       if (msg.type === 'lic:logout') { await LS.remove(['lic_token', 'lic_cache', 'lic_pending']); return sendResponse(await getState(false)); }
       if (msg.type === 'lic:checkout') return sendResponse(await checkout(msg.plan));
       if (msg.type === 'lic:snap') {   // kirim snapshot harian, terima nilai ~30 hari lalu (untuk trend)
-        const r = await api('snap', { method: 'POST', body: { items: msg.items } });
+        const r = await api('snap', { method: 'POST', body: { items: msg.items, want: msg.want || [] } });
         if (r.status === 401) { await LS.remove(['lic_token', 'lic_cache', 'lic_pending']); return sendResponse({ error: 'auth' }); }
-        return sendResponse(r.status === 200 ? { prev: r.json.prev || {} } : { error: r.json.error || ('HTTP ' + r.status) });
+        return sendResponse(r.status === 200 ? { prev: r.json.prev || {}, last: r.json.last || {} } : { error: r.json.error || ('HTTP ' + r.status) });
       }
       if (msg.type === 'lic:ai') return sendResponse(await aiAnalyze(msg.kind, msg.data, msg.force));
       sendResponse({ error: 'unknown' });

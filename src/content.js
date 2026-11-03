@@ -569,6 +569,11 @@
     const st = allItems.find((i) => i.key === detail.key);
     if (st) {
       ['stock', 'variantSales', 'ctime'].forEach((k) => { if (detail[k] == null && st[k] != null) detail[k] = st[k]; });
+      // total terjual pasti dari riwayat server (angka di halaman produk dibulatkan: "1RB+")
+      if (st.last && st.last.s != null && st.last.at && Date.now() - st.last.at < 24 * 36e5 && (detail.soldPlus || detail.sold == null) && !(st.via === 'api' && st.apiAt && Date.now() - st.apiAt < 24 * 36e5)) {
+        const mid0 = detail.priceMax && detail.price != null ? (detail.price + detail.priceMax) / 2 : detail.price;
+        if (detail.sold == null || st.last.s >= detail.sold) { detail.sold = st.last.s; detail.soldPlus = false; detail.soldMonthly = false; detail.soldExact = true; if (mid0 != null) detail.omzet = st.last.s * mid0; }
+      }
       if (st.via === 'api' && st.sold != null && !st.soldMonthly && st.apiAt && Date.now() - st.apiAt < 24 * 36e5 && (detail.soldPlus || detail.sold == null || st.sold >= detail.sold)) {
         const mid = detail.priceMax && detail.price != null ? (detail.price + detail.priceMax) / 2 : detail.price;
         detail.sold = st.sold; detail.soldPlus = false; detail.soldMonthly = false; detail.soldExact = true;
@@ -593,8 +598,19 @@
     return true;
   }
 
+  let lookedUp = '';
+  async function lookupLast() {
+    try {
+      if (!detail || !detail.key || lookedUp === detail.key || !lic || !lic.access) return;
+      lookedUp = detail.key;
+      const r = await send({ type: 'lic:snap', items: [], want: [detail.key] });
+      if (r && r.last && (await S.setLast(r.last))) { await refresh(); readDetail(); }
+    } catch (_) { /* abaikan */ }
+  }
+
   async function readAndSave() {
     readDetail();
+    lookupLast();
     await saveDetail();
     await refresh();
   }

@@ -98,6 +98,17 @@
       if (n) await chrome.storage.local.set({ items: items });
       return n;
     },
+    // total terjual pasti terakhir dari server (pengguna lain / Anda): { 'shop.item': {s, m, d} }
+    async setLast(map) {
+      const items = await Store.items();
+      let n = 0;
+      Object.keys(map || {}).forEach(function (k) {
+        const v = map[k];
+        if (items[k] && v && typeof v.s === 'number') { items[k].last = { s: v.s, m: typeof v.m === 'number' ? v.m : null, d: v.d || null, at: Date.now() }; n++; }
+      });
+      if (n) await chrome.storage.local.set({ items: items });
+      return n;
+    },
     // pembanding 30 hari lalu: snapshot lokal (20-45 hari) lebih dulu, lalu dari server
     prevMonth(item) {
       const now = Date.now();
