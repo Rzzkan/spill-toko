@@ -151,9 +151,12 @@
   const lastUpdated = (items) => items.reduce((m, i) => Math.max(m, i.lastSeen || 0), 0) || null;
 
   // ---------- kartu inline ----------
+  let prefs = { on: true, shop: true, search: true, product: true, category: true };
+  function cardOff(t) { return prefs.on === false || (t && prefs[t] === false); }
   async function renderInline() {
     if (!inline) return;
     const t = type();
+    if (cardOff(t)) { inline.hide(); return; }
     try {
       if (!lic.access && ['shop', 'search', 'category', 'product'].includes(t)) {
         inline.render({ kind: t === 'category' ? 'search' : t, locked: true, data: {} });
@@ -841,6 +844,12 @@
       getRows: getRows, onDownload: (rows) => onExport(rows)
     });
     setupApiIngest();
+    try { const r = await chrome.storage.local.get('prefs'); if (r && r.prefs) prefs = Object.assign(prefs, r.prefs); } catch (_) { /* bawaan: semua tampil */ }
+    chrome.storage.onChanged.addListener((ch, area) => {
+      if (area !== 'local' || !ch.prefs) return;
+      prefs = Object.assign({ on: true, shop: true, search: true, product: true, category: true }, ch.prefs.newValue || {});
+      if (cardOff(type())) inline.hide(); else renderInline();
+    });
     chrome.runtime.onMessage.addListener((msg) => { if (msg && msg.type === 'toggle') ui.toggle(); });
     ui.setPageType(type());
     await refreshLicense(false);

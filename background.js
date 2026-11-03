@@ -7,7 +7,8 @@ const LS = chrome.storage.local;
 const ENABLED = !!(CFG.API_BASE && CFG.GOOGLE_CLIENT_ID && CFG.LICENSE_PUBKEY);
 
 // ---------- klik ikon -> buka/tutup panel ----------
-chrome.action.onClicked.addListener(async (tab) => {
+// Popup toolbar -> buka panel di tab Shopee aktif
+async function openPanel(tab) {
   if (!tab || !tab.url || !/^https:\/\/shopee\.co\.id\//.test(tab.url)) {
     chrome.tabs.create({ url: 'https://shopee.co.id/' });
     return;
@@ -24,6 +25,13 @@ chrome.action.onClicked.addListener(async (tab) => {
       console.warn('[Spill Toko] gagal membuka panel', err);
     }
   }
+}
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg && msg.type === 'spill-open-panel' && msg.tabId != null) {
+    chrome.tabs.get(msg.tabId).then((t) => openPanel(t)).finally(() => sendResponse({ ok: true }));
+    return true;
+  }
+  return false;
 });
 
 // ---------- API ----------
