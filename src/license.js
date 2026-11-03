@@ -1,4 +1,4 @@
-/* Spill Toko - jembatan content script -> background untuk lisensi (login Google, status, checkout). */
+/* Shofee - jembatan content script -> background untuk lisensi (login Google, status, checkout). */
 (function (root) {
   'use strict';
   const send = (msg) => new Promise((resolve, reject) => {

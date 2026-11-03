@@ -1,4 +1,4 @@
-/* Spill Toko - panel UI (Shadow DOM supaya CSS Shopee tidak bentrok). */
+/* Shofee - panel UI (Shadow DOM supaya CSS Shopee tidak bentrok). */
 (function (root) {
   'use strict';
 
@@ -69,11 +69,11 @@
   `;
 
   const HTML = `
-  <button class="fab" id="fab" title="Buka Spill Toko">🔍 SPILL TOKO</button>
+  <button class="fab" id="fab" title="Buka Shofee">🔍 SHOFEE</button>
   <aside class="panel" id="panel" hidden>
-    <header><b>Spill Toko</b><small class="ver" id="pver"></small><span class="sub" id="ptype"></span><button id="close" title="Tutup">✕</button></header>
+    <header><b>Shofee</b><small class="ver" id="pver"></small><span class="sub" id="ptype"></span><button id="close" title="Tutup">✕</button></header>
     <div class="lic" id="lic" hidden></div>
-    <div class="lockmsg" id="lockmsg" hidden><b>Fitur terkunci</b>Masuk dengan akun Google dan aktifkan trial atau langganan untuk memakai Spill Toko.</div>
+    <div class="lockmsg" id="lockmsg" hidden><b>Fitur terkunci</b>Masuk dengan akun Google dan aktifkan trial atau langganan untuk memakai Shofee.</div>
     <div class="body">
       <section>
         <div class="row">

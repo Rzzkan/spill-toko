@@ -1,4 +1,4 @@
-/* Spill Toko - parser DOM Shopee.
+/* Shofee - parser DOM Shopee.
  * Tidak bergantung pada class CSS (Shopee mengacak nama class). Strategi: cari link produk
  * (…-i.{shopId}.{itemId}) lalu baca teks kartunya dengan regex. */
 (function (root, factory) {

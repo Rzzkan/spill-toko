@@ -1,4 +1,4 @@
-// Spill Toko - service worker: buka panel, lisensi (login Google, status berlangganan, checkout Midtrans).
+// Shofee - service worker: buka panel, lisensi (login Google, status berlangganan, checkout Midtrans).
 importScripts('src/config.js');
 
 const CFG = self.SPILL_CONFIG;
@@ -22,7 +22,7 @@ async function openPanel(tab) {
       await new Promise((r) => setTimeout(r, 300));
       await chrome.tabs.sendMessage(tab.id, { type: 'toggle' });
     } catch (err) {
-      console.warn('[Spill Toko] gagal membuka panel', err);
+      console.warn('[Shofee] gagal membuka panel', err);
     }
   }
 }

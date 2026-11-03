@@ -2,7 +2,7 @@
 //   node tools/bump.mjs          -> patch   1.1.0 -> 1.1.1
 //   node tools/bump.mjs minor    -> minor   1.1.4 -> 1.2.0
 //   node tools/bump.mjs major    -> major   1.2.3 -> 2.0.0
-// Mengubah manifest.json (version + version_name berisi waktu build, WIB). Versi tampil di panel & kartu Spill Data.
+// Mengubah manifest.json (version + version_name berisi waktu build, WIB). Versi tampil di panel & kartu Shofee Data.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

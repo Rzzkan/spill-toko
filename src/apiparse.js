@@ -1,4 +1,4 @@
-/* Spill Toko - pembaca respons API internal Shopee (search_items, shop/rcmd_items, pdp/get_pc, rekomendasi).
+/* Shofee - pembaca respons API internal Shopee (search_items, shop/rcmd_items, pdp/get_pc, rekomendasi).
  * Dimuat di dunia halaman (MAIN) oleh hook.js; juga bisa di-require untuk pengujian (Node). Hanya fungsi murni. */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();

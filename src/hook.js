@@ -1,4 +1,4 @@
-/* Spill Toko - berjalan di dunia halaman (MAIN) pada document_start.
+/* Shofee - berjalan di dunia halaman (MAIN) pada document_start.
  * Membaca salinan respons API yang diminta halaman Shopee sendiri dan data awal di HTML; permintaan aktif hanya untuk
  * daftar produk toko, atas perintah content script dengan batas laju (lihat ALLOW di bawah). Mengekstrak data produk, lalu mengirimnya ke content script lewat window.postMessage. */
 (function () {

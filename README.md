@@ -1,4 +1,4 @@
-# Spill Toko — Extension
+# Shofee — Extension
 
 Proyek pribadi: extension browser (Chrome, Manifest V3) untuk riset dan analisis data produk e-commerce.
 Terhubung ke layanan server milik pemilik untuk akun, langganan, dan analisis berbasis AI.

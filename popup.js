@@ -1,4 +1,4 @@
-/* Spill Toko - popup ikon toolbar: saklar utama + tampilkan/sembunyikan kartu per jenis halaman. */
+/* Shofee - popup ikon toolbar: saklar utama + tampilkan/sembunyikan kartu per jenis halaman. */
 (function () {
   'use strict';
   const KEYS = ['shop', 'search', 'product', 'category', 'active'];
@@ -16,7 +16,7 @@
   $('ver').textContent = 'v' + chrome.runtime.getManifest().version;
   try {
     const cfg = (self.SPILL_CONFIG || {});
-    $('acct').href = (cfg.SITE_URL || 'https://hipmibantul.site') + '/akun';
+    $('acct').href = (cfg.SITE_URL || 'https://temanseller.com') + '/akun';
   } catch (_) { /* abaikan */ }
 
   chrome.storage.local.get('prefs', (r) => { prefs = Object.assign({}, DEF, (r && r.prefs) || {}); paint(); });

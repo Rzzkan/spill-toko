@@ -1,4 +1,4 @@
-/* Spill Toko - orkestrasi: scan halaman, auto-scroll, multi-halaman, kartu inline, modal analisa, export. */
+/* Shofee - orkestrasi: scan halaman, auto-scroll, multi-halaman, kartu inline, modal analisa, export. */
 (function () {
   'use strict';
   if (window.__spillTokoLoaded) return;
@@ -189,7 +189,7 @@
           competitors: competitors, updatedAt: rec ? rec.lastSeen : null } });
       } else inline.hide();
       scheduleAutoAi();
-    } catch (e) { console.warn('[Spill Toko] inline', e); }
+    } catch (e) { console.warn('[Shofee] inline', e); }
   }
 
   // ---------- analisis AI (diproses server -> kenari.id) ----------
@@ -888,7 +888,7 @@
         recs.forEach((r) => pageKeys.add(r.key));
         clearTimeout(apiTimer);
         apiTimer = setTimeout(() => { refresh(); scheduleSnap(); }, 700);
-      } catch (e) { console.warn('[Spill Toko] api', e); }
+      } catch (e) { console.warn('[Shofee] api', e); }
     });
   }
 
@@ -964,7 +964,7 @@
       setBusyAll(false);
       if (j.kind === 'product' && j.result && j.result.detail) { detail = j.result.detail; competitors = j.result.competitors || []; ui.setDetail(detail); }
       await refresh();
-      if (j.finished && !j.found) ui.setStatus('Scan selesai tetapi tidak ada data terbaca di tab scan (halaman belum termuat atau Shopee meminta verifikasi). Klik "Salin diagnosa" di panel Spill Toko lalu kirim ke developer.', 'err');
+      if (j.finished && !j.found) ui.setStatus('Scan selesai tetapi tidak ada data terbaca di tab scan (halaman belum termuat atau Shopee meminta verifikasi). Klik "Salin diagnosa" di panel Shofee lalu kirim ke developer.', 'err');
       else if (j.finished) { ui.setStatus(`Selesai ${j.done} halaman — ${j.found} produk terbaca.`, 'ok'); if (j.openModal) inline.openModal(); }
       else if (j.blocked) ui.setStatus(`Shopee meminta verifikasi di tab scan. Selesaikan di sana, lalu scan lagi. (${j.found} produk terbaca)`, 'err');
       else ui.setStatus(`Scan dihentikan${j.aborted ? ' (tab scan ditutup)' : ''}. ${j.found || 0} produk terbaca.`, 'err');

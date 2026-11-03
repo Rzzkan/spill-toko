@@ -1,4 +1,4 @@
-/* Spill Toko - penyimpanan koleksi produk (chrome.storage.local) + state job multi-halaman. */
+/* Shofee - penyimpanan koleksi produk (chrome.storage.local) + state job multi-halaman. */
 (function (root) {
   'use strict';
 

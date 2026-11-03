@@ -1,4 +1,4 @@
-/* Spill Toko - kartu inline (halaman toko / produk / pencarian) + modal "Analisa Detail".
+/* Shofee - kartu inline (halaman toko / produk / pencarian) + modal "Analisa Detail".
  * Dipasang ke halaman Shopee lewat Shadow DOM agar CSS Shopee tidak bentrok. */
 (function (root) {
   'use strict';
@@ -391,7 +391,7 @@
       const dis = lbusy ? 'disabled' : '';
       const err = lerr ? `<div class="err">${esc(lerr)}</div>` : '';
       if (l.state === 'signedout') {
-        return `<div class="pw"><h3>Mulai trial gratis 3 hari</h3><p>Masuk dengan Google untuk mengaktifkan Spill Data. Tanpa kartu kredit.</p>
+        return `<div class="pw"><h3>Mulai trial gratis 3 hari</h3><p>Masuk dengan Google untuk mengaktifkan Shofee Data. Tanpa kartu kredit.</p>
           <button class="gbtn" data-lic="login" ${dis}>${GICON} ${esc(lbusy || 'Masuk dengan Google')}</button>${err}</div>`;
       }
       if (l.state === 'offline' || l.state === 'invalid' || l.state === 'unconfigured') {
@@ -459,11 +459,11 @@
       const k = payload.kind, d = payload.data;
       const aiS = ai && ai.kind === k ? ai.st : null;
       if (payload.locked || (plansOpen && L && L.enabled)) {
-        cardEl.innerHTML = `<div class="card"><div class="head"><span class="logo">${ICON}<span>Spill <small>Data</small></span><small class="ver">${VER}</small></span>` +
+        cardEl.innerHTML = `<div class="card"><div class="head"><span class="logo">${ICON}<span>Shofee <small>Data</small></span><small class="ver">${VER}</small></span>` +
           (!payload.locked ? '<button class="bdg" data-act="closeplans">✕ Tutup</button>' : '') + '</div>' + paywall() + '</div>';
         return;
       }
-      const head = `<div class="head"><span class="logo">${ICON}<span>Spill <small>Data</small></span><small class="ver">${VER}</small></span>` +
+      const head = `<div class="head"><span class="logo">${ICON}<span>Shofee <small>Data</small></span><small class="ver">${VER}</small></span>` +
         TABS[k].map((x) => `<button class="tab${tabs[k] === x[0] ? ' on' : ''}${x[0] === 'ai' ? ' ai' : ''}" data-tab="${x[0]}">${x[1]}${x[0] === 'ai' && aiS && aiS.status === 'ok' ? '<i class="dt"></i>' : ''}</button>`).join('') + badge() +
         `<span class="upd">${d.updatedAt ? 'Terakhir diperbarui ' + fmtDate(d.updatedAt) : 'Belum pernah di-scan'}. <a data-act="refresh">Refresh</a></span></div>`;
       const body = tabs[k] === 'ai' ? aiBody(k) : k === 'shop' ? shopBody(d) : k === 'search' ? searchBody(d) : productBody(d);
@@ -515,7 +515,7 @@
     mhost.id = 'spill-modal-host';
     const msr = mhost.attachShadow({ mode: 'open' });
     msr.innerHTML = `<style>${MCSS}</style><div class="ov" id="ov" hidden><div class="md">
-      <div class="mh"><span class="lg">${ICON}<span>Spill Toko</span></span><span class="ttl">Analisa</span><span class="upd" id="mupd"></span><button class="x" data-a="close">✕</button></div>
+      <div class="mh"><span class="lg">${ICON}<span>Shofee</span></span><span class="ttl">Analisa</span><span class="upd" id="mupd"></span><button class="x" data-a="close">✕</button></div>
       <div class="tb"><b>Urutkan:</b><select id="msort">${SORTS.map((s) => `<option value="${s[0]}">${s[1]}</option>`).join('')}</select>
         <button class="g" data-a="filter" id="mfbtn">Show Filter</button><span class="sp"></span>
         <button class="g" data-a="download">Download</button>
