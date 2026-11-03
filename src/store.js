@@ -30,11 +30,15 @@
             if (hist.length > 20) hist.shift();
           }
         }
+        // snapshot terjual-30-hari pasti (maks 1 per ~20 jam) untuk trend lokal
+        const mh = (old && old.mh) ? old.mh.slice() : [];
+        if (r0.via === 'api' && r0.api30 != null && (!mh.length || now - mh[mh.length - 1].t > 20 * 36e5)) { mh.push({ t: now, m: r0.api30 }); if (mh.length > 14) mh.shift(); }
         const merged = Object.assign({}, old || {});
         Object.keys(r).forEach(function (k) {
           if (r[k] !== undefined && r[k] !== null && r[k] !== '') merged[k] = r[k];
         });
         merged.hist = hist;
+        merged.mh = mh;
         merged.firstSeen = (old && old.firstSeen) || now;
         merged.lastSeen = now;
         merged.source = (meta && meta.source) || (old && old.source) || '';
@@ -83,7 +87,33 @@
     },
 
     // laju terjual interval terakhir vs interval sebelumnya (butuh >=3 titik riwayat)
+    // simpan nilai ~30 hari lalu dari server: { 'shop.item': {m, s, d} }
+    async setPrev(map) {
+      const items = await Store.items();
+      let n = 0;
+      Object.keys(map || {}).forEach(function (k) {
+        const v = map[k];
+        if (items[k] && v && typeof v.m === 'number') { items[k].prev30 = { m: v.m, d: v.d || null, at: Date.now() }; n++; }
+      });
+      if (n) await chrome.storage.local.set({ items: items });
+      return n;
+    },
+    // pembanding 30 hari lalu: snapshot lokal (20-45 hari) lebih dulu, lalu dari server
+    prevMonth(item) {
+      const now = Date.now();
+      let best = null;
+      (item.mh || []).forEach(function (e) {
+        const d = (now - e.t) / 864e5;
+        if (d >= 20 && d <= 45 && (!best || Math.abs(d - 30) < Math.abs(best.d - 30))) best = { d: d, m: e.m };
+      });
+      if (best) return best.m;
+      return item.prev30 && typeof item.prev30.m === 'number' ? item.prev30.m : null;
+    },
     trend(item) {
+      if (item.api30 != null) {
+        const pm = Store.prevMonth(item);
+        if (pm != null && pm > 0) return { cur: item.api30, prev: pm };
+      }
       const h = (item.hist || []).filter(function (e) { return e.x; });
       const n = h.length;
       if (n < 3) return null;

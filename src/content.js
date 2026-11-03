@@ -302,6 +302,33 @@
   }
 
   // ---------- scan ----------
+  // ---------- riwayat harian bersama (trend naik/turun) ----------
+  // Angka pasti 30 hari dikirim ke server sekali sehari per produk; server membalas nilai ~30 hari lalu sehingga trend
+  // bisa dihitung segera bila produk itu pernah terbaca (oleh Anda atau pengguna lain).
+  let snapTimer = null, snapBusy = false;
+  function scheduleSnap() { clearTimeout(snapTimer); snapTimer = setTimeout(syncSnap, 2500); }
+  async function syncSnap() {
+    if (snapBusy || !lic || !lic.access) return;
+    snapBusy = true;
+    try {
+      const day = new Date().toISOString().slice(0, 10);
+      const sent = (await chrome.storage.local.get('snap_sent')).snap_sent || { day: day, k: {} };
+      if (sent.day !== day) { sent.day = day; sent.k = {}; }
+      const all = await S.items();
+      const need = Object.keys(all).filter((k) => { const i = all[k]; return !sent.k[k] && i.via === 'api' && i.api30 != null; });
+      let got = 0;
+      for (let o = 0; o < need.length && o < 450; o += 150) {
+        const batch = need.slice(o, o + 150).map((k) => ({ k: k, m: all[k].api30, s: all[k].sold != null && !all[k].soldMonthly ? all[k].sold : null, p: all[k].price }));
+        const r = await send({ type: 'lic:snap', items: batch });
+        if (!r || r.error) break;
+        batch.forEach((b) => { sent.k[b.k] = 1; });
+        got += await S.setPrev(r.prev);
+      }
+      await chrome.storage.local.set({ snap_sent: sent });
+      if (got) await refresh();
+    } catch (_) { /* abaikan */ } finally { snapBusy = false; }
+  }
+
   // ---------- cache hasil scan ----------
   // Halaman yang sudah dipindai dalam beberapa jam terakhir tidak dipindai ulang (kecuali tombol Refresh / scan manual dari panel).
   const CACHE_TTL = 6 * 3600e3;
@@ -320,10 +347,10 @@
       return e && Date.now() - e.t < CACHE_TTL ? e : null;
     } catch (_) { return null; }
   }
-  async function cachePut(u, n) {
+  async function cachePut(u, n, keys) {
     try {
       const o = (await chrome.storage.local.get('scan_cache')).scan_cache || {};
-      o[cacheKeyOf(u)] = { t: Date.now(), n: n };
+      o[cacheKeyOf(u)] = { t: Date.now(), n: n, keys: Array.isArray(keys) ? keys.slice(0, 200) : undefined };
       const ks = Object.keys(o);
       if (ks.length > 300) ks.sort((a, b) => o[a].t - o[b].t).slice(0, ks.length - 300).forEach((k) => delete o[k]);
       await chrome.storage.local.set({ scan_cache: o });
@@ -341,7 +368,8 @@
     if (recs.length) {
       const res = await S.upsert(recs, { source: sourceLabel() });
       recs.forEach((r) => pageKeys.add(r.key));
-      await cachePut(location.href, recs.length);
+      await cachePut(location.href, recs.length, recs.map((r) => r.key));
+      scheduleSnap();
       await refresh();
       return { n: recs.length, res };
     }
@@ -355,6 +383,7 @@
     if (!(opts && opts.force)) {
       const c = await cacheGet(location.href);
       if (c) {
+        if (c.keys) pageKeys = new Set(c.keys);
         await refresh();
         ui.setStatus(`Memakai data tersimpan (${agoTxt(c.t)}, ${c.n} produk). Klik Refresh untuk memindai ulang.`, 'ok');
         if (opts && opts.openModal) inline.openModal();
@@ -717,7 +746,7 @@
         apiSeen += recs.length;
         recs.forEach((r) => pageKeys.add(r.key));
         clearTimeout(apiTimer);
-        apiTimer = setTimeout(() => { refresh(); }, 700);
+        apiTimer = setTimeout(() => { refresh(); scheduleSnap(); }, 700);
       } catch (e) { console.warn('[Spill Toko] api', e); }
     });
   }

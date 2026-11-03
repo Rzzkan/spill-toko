@@ -19,5 +19,11 @@ let fail = 0; const eq = (n, g, w) => { const ok = JSON.stringify(g) === JSON.st
   await new Promise((r) => setTimeout(r, 5));
   const it7 = (await S.items())['7.7']; it7.hist = [{ t: Date.now() - 3 * 864e5, sold: 7000, m: false }, { t: Date.now(), sold: 7000, m: false }]; it7.lastSeen = Date.now();
   eq('riwayat DOM dibulatkan: rate30 null', S.rate30(it7), null);
+  // trend dari snapshot 30 hari lalu (lokal dan server)
+  const D = 864e5;
+  eq('trend lokal +25%', JSON.stringify(S.trend({ api30: 100, mh: [{ t: Date.now() - 30 * D, m: 80 }] })), JSON.stringify({ cur: 100, prev: 80 }));
+  eq('trend lokal: snapshot terlalu baru diabaikan', S.trend({ api30: 100, mh: [{ t: Date.now() - 5 * D, m: 80 }] }), null);
+  eq('trend dari server', JSON.stringify(S.trend({ api30: 50, prev30: { m: 100 } })), JSON.stringify({ cur: 50, prev: 100 }));
+  eq('tanpa api30: tidak ada trend', S.trend({ prev30: { m: 100 } }), null);
   if (fail) process.exit(1); console.log('Semua lolos');
 })();
