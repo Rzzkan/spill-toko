@@ -308,7 +308,7 @@
       const r = d.rate;
       const estTag = r && r.est ? ' <small style="color:#d97706">(estimasi)</small>' : '';
       const sec2 = rows([['Omset / Bulan', perMonth != null && mid != null ? full(perMonth * mid) : '–'], ['Terjual / Bulan', perMonth != null ? cnt(Math.round(perMonth)) : '–'], ['Omset 30 hari', r && r.omzet != null ? full(r.omzet) + estTag : '–'], ['Terjual 30 hari', r ? cnt(r.sold) + estTag : '–'], ['Trend 30 hari', trendTxt(d.trendPct)]]);
-      const sec3 = rows([['Wishlist', p.favorit != null ? '❤ ' + cnt(p.favorit) : '–'], ['Nilai Jual Stok', mid != null && p.stock != null ? full(mid * p.stock) : 'n/a'],
+      const sec3 = rows([['Wishlist', p.favorit != null ? '❤ ' + cnt(p.favorit) : '–'], ['Nilai Jual Stok', p.price != null && p.stock != null ? full(p.price * p.stock) : 'n/a'],
         ['Komplain (★1–2)', p.complaintPct != null ? p.complaintPct.toString().replace('.', ',') + '%' : '–'],
         ['Penjualan Varian', vsTxt || '<span style="color:#9ca3af">tidak disediakan Shopee untuk produk ini</span>'],
         ['Varian', p.variants && p.variants.length ? p.variants.map((v) => esc(v.name) + ' (' + v.options.length + ')').join(', ') : '–']]);
@@ -492,7 +492,7 @@
         <div class="kv"><span>% Market Share</span><span>${r.share != null ? r.share.toFixed(2).replace('.', ',') + '%' : '–'}</span></div>
         <div class="kv"><span>Nilai Ulasan</span><span>${r.rating != null ? '★ ' + r.rating.toFixed(2).replace('.', ',') : '–'}</span></div>
         <div class="kv"><span>Wishlist</span><span>${r.favorit != null ? '❤ ' + cnt(r.favorit) : '–'}</span></div>
-        <div class="kv"><span>Nilai Jual Stok</span><span>${r.stock != null && r.price != null ? full(r.stock * ((r.priceMax ? (r.price + r.priceMax) / 2 : r.price))) : 'n/a'}</span></div>
+        <div class="kv"><span>Nilai Jual Stok</span><span>${r.stock != null && r.price != null ? full(r.stock * r.price) : 'n/a'}</span></div>
       </div></div>`;
     }
 
