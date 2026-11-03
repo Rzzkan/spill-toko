@@ -536,9 +536,25 @@
     }
     await S.setJob(job);
     ui.setStatus(`Halaman ${job.done}/${job.total} selesai (${job.found} produk). Lanjut ke halaman berikut…`);
-    await sleep(rand(2500, 4500)); // jeda acak agar tidak seperti bot
+    await sleep(job.staged ? rand(7000, 13000) : rand(2500, 4500)); // jeda acak (lebih panjang untuk scan bertahap) agar tidak seperti bot
     if (cancelled) { job.active = false; await S.setJob(job); setBusyAll(false); closeRunner(); return; }
     location.href = P.nextPageUrl(location.href);
+  }
+
+  // Scan bertahap seluruh produk toko: tab latar belakang, jeda panjang antar halaman, progres tampil di kartu.
+  async function onStaged() {
+    if (busy) return;
+    if (!guard()) return;
+    if (type() !== 'shop') { ui.setStatus('Scan bertahap hanya untuk halaman toko.', 'err'); return; }
+    if (P.isBlockedPage(location)) { ui.setStatus('Shopee meminta verifikasi/login. Selesaikan dulu secara manual.', 'err'); return; }
+    const sid = shopIdFromPage();
+    const info = P.parseShopInfo(document);
+    const saved = (sid && (await S.shop(sid))) || {};
+    const products = info.products || saved.products || 0;
+    const pages = Math.max(1, Math.min(15, Math.ceil((products || 60) / 30)));
+    const u = new URL(location.href); u.searchParams.delete('page');
+    inline.setProgress({ state: 'run', done: 0, total: pages, found: 0, expect: products || null });
+    await startJob({ total: pages, kind: 'shop-all', staged: true, shopId: sid, expect: products || null, openModal: false, force: true }, u.toString());
   }
 
   async function onStop() {
@@ -596,6 +612,7 @@
       if (!st) return c;
       const o = Object.assign({}, c);
       if (st.ctime != null) o.ctime = st.ctime;
+      if (!o.image && st.image) o.image = st.image;
       if (st.via === 'api' && st.sold != null && !st.soldMonthly) { o.sold = st.sold; o.soldPlus = false; o.soldMonthly = false; }
       if (st.ratingCount != null && o.ratingCount == null) o.ratingCount = st.ratingCount;
       if (st.rating != null && o.rating == null) o.rating = st.rating;
@@ -841,7 +858,7 @@
   async function init() {
     ui = SpillUI.mount({ onScan: () => onScan({ force: true }), onMulti, onStop, onAnalyze: () => onProductAnalyze(true), onSaveDetail, onExport, onCopy, onClear, onDiag, onLicense });
     inline = SpillInline.create({
-      onAnalyze, onRefresh, onAi, onPanel: () => ui.toggle(true), onMulti, onLicense,
+      onAnalyze, onRefresh, onAi, onPanel: () => ui.toggle(true), onMulti, onLicense, onStaged, onStop,
       getRows: getRows, onDownload: (rows) => onExport(rows)
     });
     setupApiIngest();
@@ -863,6 +880,7 @@
     // identitas tab ini (untuk membedakan halaman asal vs jendela scan)
     const who = await send({ type: 'spill-whoami' });
     myTabId = who && who.tabId != null ? who.tabId : null;
+    try { const j0 = await S.getJob(); if (j0 && j0.staged && j0.active && j0.originTabId === myTabId) inline.setProgress({ state: 'run', done: j0.done, total: j0.total, found: j0.found || 0, expect: j0.expect || null }); } catch (_) { /* abaikan */ }
 
     // halaman asal: ikuti progres job yang berjalan di jendela scan
     let lastSeen = '';
@@ -870,6 +888,7 @@
       if (area !== 'local' || !ch.job) return;
       const j = ch.job.newValue;
       if (!j || j.mode !== 'window' || myTabId == null || j.originTabId !== myTabId) return;
+      if (j.staged) inline.setProgress({ state: j.active ? 'run' : j.blocked ? 'blocked' : j.finished ? 'done' : null, done: j.done, total: j.total, found: j.found || 0, expect: j.expect || null });
       if (j.active) { setBusyAll(true, `Memindai ${Math.min(j.done + 1, j.total)}/${j.total} (tab latar belakang)…`); ui.setStatus(`Tab scan: ${j.done}/${j.total} halaman, ${j.found || 0} produk terbaca.`); return; }
       const key = j.startedAt + ':' + (j.finished ? 'f' : j.blocked ? 'b' : 'x');
       if (key === lastSeen) return;

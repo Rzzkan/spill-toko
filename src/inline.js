@@ -46,6 +46,7 @@
   .btn:hover{background:#c24a18}.btn:disabled{opacity:.7;cursor:default}
   .btn .dot{position:absolute;top:-5px;right:-5px;width:12px;height:12px;border-radius:50%;background:#f5222d}
   .lnk{display:block;margin-top:8px;font-size:12px;color:#1a73e8;cursor:pointer;text-decoration:underline;background:none;border:0;width:100%}
+  .prog{margin:2px 0 10px;padding:10px 14px;border-radius:8px;background:#fff7f4;border:1px solid #fbd5c9;font-size:12.5px;color:#444}.prog .pt{display:flex;justify-content:space-between;gap:12px;align-items:center}.prog a{color:#1a73e8;cursor:pointer;text-decoration:underline;white-space:nowrap}.prog .pb{margin-top:8px;height:6px;border-radius:99px;background:#f3d9d0;overflow:hidden}.prog .pb i{display:block;height:100%;border-radius:99px;background:#ee4d2d;transition:width .4s}.prog.run .pb i{background-image:linear-gradient(45deg,rgba(255,255,255,.35) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.35) 50%,rgba(255,255,255,.35) 75%,transparent 75%);background-size:16px 16px;animation:pgs 1s linear infinite}.prog.err{background:#fff4f4;border-color:#f3c4c4}@keyframes pgs{to{background-position:16px 0}}
   .note{margin-top:10px;font-size:12px;color:#888;line-height:1.5}.note a{color:#1a73e8;cursor:pointer;text-decoration:underline}
   .sec{margin:0 14px 14px}.sec h5{margin:0 0 8px;font-size:14px;color:#111}
   .r{display:flex;padding:5px 0;font-size:14px}.r>span:first-child{width:34%;color:#333;flex:none}.r>span:last-child{flex:1;color:#222}
@@ -149,7 +150,7 @@
     const sr = host.attachShadow({ mode: 'open' });
     sr.innerHTML = '<style>' + CSS + '</style><div id="card"></div>';
     const cardEl = sr.getElementById('card');
-    let payload = null, placedKind = null, busyText = null, L = null, plansOpen = false, lbusy = null, lerr = null;
+    let prog = null, payload = null, placedKind = null, busyText = null, L = null, plansOpen = false, lbusy = null, lerr = null;
     const tabs = { shop: 'ringkasan', search: 'ringkasan', product: 'transaksi' };
     let compAll = false;
 
@@ -261,7 +262,7 @@
         const total = i.products;
         note = `Berdasarkan ${cnt(d.scanned)}${total ? ' dari ' + cnt(total) : ''} produk ter-scan${total && d.scanned < total * 0.9 ? ' — klik Analisa Detail untuk melengkapi' : ''}. Jumlah terjual dibulatkan Shopee sehingga omset adalah <b>estimasi</b>; data 30 hari menjadi akurat setelah scan ulang di hari berbeda.`;
       }
-      return body + '</div><div class="note">' + note + ' <a data-act="panel">Buka tabel samping</a></div>';
+      return body + '</div><div class="note">' + note + ' <a data-act="panel">Buka tabel samping</a>' + (!prog || prog.state !== 'run' ? ' · <a data-act="staged">Scan semua produk toko (bertahap, di latar belakang)</a>' : '') + '</div>';
     }
 
     function searchBody(d) {
@@ -458,7 +459,15 @@
         TABS[k].map((x) => `<button class="tab${tabs[k] === x[0] ? ' on' : ''}${x[0] === 'ai' ? ' ai' : ''}" data-tab="${x[0]}">${x[1]}${x[0] === 'ai' && aiS && aiS.status === 'ok' ? '<i class="dt"></i>' : ''}</button>`).join('') + badge() +
         `<span class="upd">${d.updatedAt ? 'Terakhir diperbarui ' + fmtDate(d.updatedAt) : 'Belum pernah di-scan'}. <a data-act="refresh">Refresh</a></span></div>`;
       const body = tabs[k] === 'ai' ? aiBody(k) : k === 'shop' ? shopBody(d) : k === 'search' ? searchBody(d) : productBody(d);
-      cardEl.innerHTML = '<div class="card">' + head + body + '</div>';
+      cardEl.innerHTML = '<div class="card">' + head + progBar() + body + '</div>';
+    }
+
+    function progBar() {
+      if (!prog) return '';
+      const pct = prog.total ? Math.max(3, Math.min(100, Math.round((prog.done / prog.total) * 100))) : 3;
+      if (prog.state === 'run') return `<div class="prog run"><div class="pt"><span>⏳ Memindai semua produk di latar belakang — halaman ${Math.min(prog.done + 1, prog.total)} dari ${prog.total} · ${prog.found || 0}${prog.expect ? ' dari ±' + prog.expect : ''} produk terbaca</span><a data-act="stop">Hentikan</a></div><div class="pb"><i style="width:${pct}%"></i></div></div>`;
+      if (prog.state === 'blocked') return `<div class="prog err"><div class="pt"><span>⚠️ Dijeda: Shopee meminta verifikasi di tab scan. Selesaikan di sana, lalu <a data-act="staged">lanjutkan scan</a>. (${prog.found || 0} produk terbaca)</span></div></div>`;
+      return `<div class="prog"><div class="pt"><span>✅ Scan selesai — ${prog.found || 0} produk terbaca dari ${prog.done} halaman.</span><a data-act="dismiss">Tutup</a></div></div>`;
     }
 
     cardEl.addEventListener('click', (e) => {
@@ -486,6 +495,9 @@
       else if (act === 'refresh') h.onRefresh(payload.kind);
       else if (act === 'panel') h.onPanel();
       else if (act === 'multi') h.onMulti(3);
+      else if (act === 'staged') h.onStaged && h.onStaged();
+      else if (act === 'stop') h.onStop && h.onStop();
+      else if (act === 'dismiss') { prog = null; draw(); }
       else if (act === 'compmore') { compAll = !compAll; draw(); }
     });
 
@@ -594,6 +606,7 @@
         draw();
       },
       hide() { payload = null; placedKind = null; host.remove(); draw(); },
+      setProgress(p) { prog = p || null; draw(); },
       setBusy(text) { busyText = text || null; ms.busy = !!text && !m$('ov').hidden; draw(); if (!m$('ov').hidden) mdraw(); },
       setLic(l) { L = l; if (L && (!L.enabled || !L.access || L.state === 'lifetime') && plansOpen && L.access) plansOpen = false; },
       setAi(kind, st) { ai = kind ? { kind: kind, st: st } : null; draw(); },

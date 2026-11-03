@@ -204,10 +204,21 @@
     }
 
     let image = '';
+    const okSrc = function (u) { return u && !/^data:|\.svg(\?|$)/i.test(u) && /^https?:/.test(u); };
     const imgs = Array.prototype.slice.call(card.querySelectorAll('img'));
-    for (let i = 0; i < imgs.length; i++) {
-      const src = imgs[i].currentSrc || imgs[i].getAttribute('src') || '';
-      if (src && !/^data:|\.svg(\?|$)/i.test(src) && /^https?:/.test(src)) { image = src; break; }
+    for (let i = 0; i < imgs.length && !image; i++) {
+      const el = imgs[i];
+      // gambar lazy-load: src bisa masih placeholder, alamat asli ada di data-src / srcset
+      const cands = [el.currentSrc, el.getAttribute('src'), el.getAttribute('data-src'), el.getAttribute('data-lazy-src'),
+        (el.getAttribute('srcset') || el.getAttribute('data-srcset') || '').split(',')[0].trim().split(' ')[0]];
+      for (let k = 0; k < cands.length; k++) if (okSrc(cands[k])) { image = cands[k]; break; }
+    }
+    if (!image) {   // gambar sebagai background-image CSS
+      const bgs = Array.prototype.slice.call(card.querySelectorAll('[style*="background-image"]'));
+      for (let i = 0; i < bgs.length && !image; i++) {
+        const m = /url\(["']?([^"')]+)["']?\)/.exec(bgs[i].getAttribute('style') || '');
+        if (m && okSrc(m[1])) image = m[1];
+      }
     }
 
     const badges = [];
