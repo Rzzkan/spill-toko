@@ -166,6 +166,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         if (r.status === 401) { await LS.remove(['lic_token', 'lic_cache', 'lic_pending']); return sendResponse({ error: 'auth' }); }
         return sendResponse(r.status === 200 ? { prev: r.json.prev || {}, last: r.json.last || {} } : { error: r.json.error || ('HTTP ' + r.status) });
       }
+      if (msg.type === 'lic:affiliate') {   // komisi affiliate (kredensial Open API disimpan admin di server)
+        const r = await api('affiliate', { method: 'POST', body: { key: msg.key } });
+        if (r.status === 401) { await LS.remove(['lic_token', 'lic_cache', 'lic_pending']); return sendResponse({ error: 'auth' }); }
+        return sendResponse(r.status === 200 ? r.json : { error: r.json.error || ('HTTP ' + r.status) });
+      }
       if (msg.type === 'lic:ai') return sendResponse(await aiAnalyze(msg.kind, msg.data, msg.force));
       sendResponse({ error: 'unknown' });
     } catch (e) { sendResponse({ error: (e && e.message) || String(e) }); }

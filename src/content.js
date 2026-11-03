@@ -597,6 +597,7 @@
       if (st.rating != null && o.rating == null) o.rating = st.rating;
       return o;
     });
+    if (affCache[detail.key]) detail.aff = affCache[detail.key];
     ui.setDetail(detail);
     return detail;
   }
@@ -607,6 +608,18 @@
     await S.upsert(recs, { source: source || 'detail produk' });
     pageKeys.add(detail.key);
     return true;
+  }
+
+  const affCache = {};
+  async function lookupAff() {
+    try {
+      if (!detail || !detail.key || affCache[detail.key] !== undefined || !lic || !lic.access) return;
+      const key = detail.key;
+      affCache[key] = null;   // sedang memuat
+      const r = await send({ type: 'lic:affiliate', key: key });
+      affCache[key] = r && !r.error ? r : { error: (r && r.error) || 'tidak terhubung' };
+      if (detail && detail.key === key) { detail.aff = affCache[key]; ui.setDetail(detail); }
+    } catch (_) { /* abaikan */ }
   }
 
   let lookedUp = '';
@@ -622,6 +635,7 @@
   async function readAndSave() {
     readDetail();
     lookupLast();
+    lookupAff();
     await saveDetail();
     await refresh();
   }

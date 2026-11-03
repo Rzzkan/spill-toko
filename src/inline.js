@@ -290,6 +290,22 @@
         } else h2 += '<div class="empty">Distribusi bintang belum termuat. Klik <b>Analisa</b> agar bagian ulasan ikut dimuat.</div>';
         return h2 + '</div>' + actRow() + '</div>';
       }
+      if (t === 'affiliate') {
+        const a = p.aff;
+        let h2 = '<div class="body"><div class="sec">';
+        if (a === undefined || a === null) h2 += '<div class="empty">Memuat data komisi…</div>';
+        else if (a.error) h2 += '<div class="empty">Data komisi belum bisa dimuat (' + esc(String(a.error).slice(0, 80)) + ').</div>';
+        else if (!a.enabled) h2 += '<div class="empty">Data Affiliate belum diaktifkan oleh admin.</div>';
+        else if (!a.found || !a.data) h2 += '<div class="empty">Produk ini tidak terdaftar di program Affiliate Shopee.</div>';
+        else {
+          const x = a.data, pc = (v) => (v == null ? '–' : String(v).replace('.', ',') + '%');
+          h2 += '<h5>Komisi</h5>' + rows([['Komisi Xtra (penjual)', pc(x.rate_seller) + (x.rate_seller != null && x.price_min != null ? ' (' + full(Math.round(x.price_min * x.rate_seller / 100)) + ')' : '')],
+            ['Komisi Shopee', pc(x.rate_shopee) + (x.rate_shopee != null && x.price_min != null ? ' (' + full(Math.round(x.price_min * x.rate_shopee / 100)) + ')' : '')],
+            ['Komisi Total', pc(x.rate_total) + (x.commission != null ? ' (' + full(x.commission) + ')' : '')]]) +
+            '<h5>Produk di program Affiliate</h5>' + rows([['Terjual (data Shopee)', cnt(x.sales)], ['Rating', x.rating != null ? '★ ' + x.rating : '–']]);
+        }
+        return h2 + '</div>' + (a && a.enabled ? '<div class="note">Dari Open API Affiliate Shopee. Nominal komisi dihitung dari harga terendah.</div>' : '') + '</div>';
+      }
       if (t === 'kompetitor') {
         const cs = d.competitors || [];
         if (!cs.length) return '<div class="body">' + topTable([], '') + actRow() + '</div>';
@@ -426,7 +442,7 @@
     const TABS = {
       shop: [['ringkasan', 'Ringkasan'], ['omset', 'Omset'], ['volume', 'Volume'], ['info', 'Informasi Umum'], ['andalan', 'Produk Andalan'], ['ai', '✨ Analisa AI']],
       search: [['ringkasan', 'Ringkasan'], ['market', 'Market Size'], ['volume', 'Volume'], ['ai', '✨ Analisa AI']],
-      product: [['transaksi', 'Transaksi'], ['ulasan', 'Ulasan'], ['kompetitor', 'Kompetitor'], ['varian', 'Varian'], ['ai', '✨ Analisa AI']]
+      product: [['transaksi', 'Transaksi'], ['ulasan', 'Ulasan'], ['kompetitor', 'Kompetitor'], ['varian', 'Varian'], ['affiliate', 'Affiliate'], ['ai', '✨ Analisa AI']]
     };
 
     function draw() {
