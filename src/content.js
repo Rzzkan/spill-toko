@@ -152,7 +152,7 @@
   const lastUpdated = (items) => items.reduce((m, i) => Math.max(m, i.lastSeen || 0), 0) || null;
 
   // ---------- kartu inline ----------
-  let prefs = { on: true, shop: true, search: true, product: true, category: true };
+  let prefs = { on: true, shop: true, search: true, product: true, category: true, active: true };
   function cardOff(t) { return prefs.on === false || (t && prefs[t] === false); }
   async function renderInline() {
     if (!inline) return;
@@ -541,7 +541,68 @@
     location.href = P.nextPageUrl(location.href);
   }
 
-  // Scan bertahap seluruh produk toko: tab latar belakang, jeda panjang antar halaman, progres tampil di kartu.
+  // ---------- pengambilan data aktif (eksperimen): daftar produk toko lewat fetch halaman, ber-batas laju ----------
+  let activeRun = false, activeCancel = false, fetchSeq = 0;
+  function pageFetch(url) {
+    return new Promise((res) => {
+      const id = ++fetchSeq;
+      const to = setTimeout(() => { window.removeEventListener('message', on); res({ status: 0, n: 0, err: 'timeout' }); }, 20000);
+      function on(ev) {
+        const d = ev.data;
+        if (ev.source !== window || !d || d.__spill !== 'fetch-res' || d.id !== id) return;
+        clearTimeout(to); window.removeEventListener('message', on); res(d);
+      }
+      window.addEventListener('message', on);
+      window.postMessage({ __spill: 'fetch', id: id, url: url }, location.origin);
+    });
+  }
+
+  // return { ok, found, stop } ; ok=true bila seluruh daftar terambil
+  async function activeShopScan(sid, expect, silent) {
+    if (activeRun || !sid) return { ok: false, found: 0, stop: 'sibuk' };
+    activeRun = true; activeCancel = false;
+    const pages = Math.max(1, Math.min(15, Math.ceil((expect || 60) / 30) + 1));
+    let found = 0, stop = null, done = 0;
+    try {
+      for (let pg = 0; pg < pages && !activeCancel; pg++) {
+        inline.setProgress({ state: 'run', mode: 'api', done: pg, total: pages, found: found, expect: expect || null });
+        const url = '/api/v4/search/search_items?by=pop&limit=30&match_id=' + encodeURIComponent(sid) + '&newest=' + (pg * 30) + '&order=desc&page_type=shop&scenario=PAGE_OTHERS&version=2';
+        const r = await pageFetch(url);
+        if (r.status !== 200 || r.err) { stop = r.err ? 'ditolak (' + r.err + ')' : 'status ' + r.status; break; }
+        done = pg + 1;
+        if (!r.n) break;   // habis
+        found += r.n;
+        await sleep(rand(3500, 7000));   // jeda acak agar tidak seperti bot
+      }
+    } finally { activeRun = false; }
+    if (activeCancel) { inline.setProgress(null); return { ok: false, found: found, stop: 'dihentikan' }; }
+    await refresh();
+    try { const o = (await chrome.storage.local.get('active_run')).active_run || {}; o[sid] = { at: Date.now(), ok: !stop, found: found }; await chrome.storage.local.set({ active_run: o }); } catch (_) { /* abaikan */ }
+    if (stop) {
+      try { await chrome.storage.local.set({ active_fail: { at: Date.now(), why: stop } }); } catch (_) { /* abaikan */ }
+      if (silent) inline.setProgress({ state: 'err', msg: 'Pengambilan data otomatis ' + stop + (found ? ' — ' + found + ' produk sempat terbaca' : '') + '. Gunakan link scan bertahap di bawah.' });
+    } else inline.setProgress({ state: 'done', done: done, total: done, found: found });
+    return { ok: !stop, found: found, stop: stop };
+  }
+
+  async function autoActive() {
+    try {
+      if (prefs.on === false || prefs.active === false || !lic.access || type() !== 'shop' || activeRun || busy) return;
+      const sid = shopIdFromPage();
+      if (!sid) return;
+      const jb = await S.getJob(); if (jb && jb.active) return;   // jangan jalan di tab scan
+      const st = await chrome.storage.local.get(['active_run', 'active_fail']);
+      if (st.active_fail && Date.now() - st.active_fail.at < 24 * 36e5) return;          // pernah ditolak: jangan ulangi otomatis
+      if (st.active_run && st.active_run[sid] && Date.now() - st.active_run[sid].at < 6 * 36e5) return;
+      const info = P.parseShopInfo(document), saved = (await S.shop(sid)) || {};
+      const products = info.products || saved.products || 0;
+      const have = allItems.filter((i) => i.shopId === sid && i.sold != null).length;
+      if (products && have >= products * 0.9) return;
+      await activeShopScan(sid, products, true);
+    } catch (_) { /* abaikan */ }
+  }
+
+  // Scan bertahap seluruh produk toko: coba ambil data aktif dulu; bila ditolak/kurang, lanjut scan di tab latar belakang.
   async function onStaged() {
     if (busy) return;
     if (!guard()) return;
@@ -552,13 +613,18 @@
     const saved = (sid && (await S.shop(sid))) || {};
     const products = info.products || saved.products || 0;
     const pages = Math.max(1, Math.min(15, Math.ceil((products || 60) / 30)));
+    if (prefs.active !== false && !activeRun) {
+      const r = await activeShopScan(sid, products, false);
+      if (r.stop === 'dihentikan') return;
+      if (r.ok && (!products || r.found >= products * 0.9)) return;   // lengkap
+    }
     const u = new URL(location.href); u.searchParams.delete('page');
     inline.setProgress({ state: 'run', done: 0, total: pages, found: 0, expect: products || null });
     await startJob({ total: pages, kind: 'shop-all', staged: true, shopId: sid, expect: products || null, openModal: false, force: true }, u.toString());
   }
 
   async function onStop() {
-    cancelled = true;
+    cancelled = true; activeCancel = true;
     const job = await S.getJob();
     if (job) { job.active = false; await S.setJob(job); if (job.mode === 'window') send({ type: 'spill-close-runner' }); }
     ui.setStatus('Menghentikan…');
@@ -853,6 +919,7 @@
     if (!['shop', 'search', 'category', 'product'].includes(t)) inline.hide();
     refresh();
     scheduleInitialRender();
+    setTimeout(autoActive, 6000);
   }
 
   async function init() {
@@ -865,7 +932,7 @@
     try { const r = await chrome.storage.local.get('prefs'); if (r && r.prefs) prefs = Object.assign(prefs, r.prefs); } catch (_) { /* bawaan: semua tampil */ }
     chrome.storage.onChanged.addListener((ch, area) => {
       if (area !== 'local' || !ch.prefs) return;
-      prefs = Object.assign({ on: true, shop: true, search: true, product: true, category: true }, ch.prefs.newValue || {});
+      prefs = Object.assign({ on: true, shop: true, search: true, product: true, category: true, active: true }, ch.prefs.newValue || {});
       if (cardOff(type())) inline.hide(); else renderInline();
     });
     chrome.runtime.onMessage.addListener((msg) => { if (msg && msg.type === 'toggle') ui.toggle(); });
@@ -873,6 +940,7 @@
     await refreshLicense(false);
     await refresh();
     scheduleInitialRender();
+    setTimeout(autoActive, 6000);
     setInterval(() => refreshLicense(true), 30 * 60 * 1000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden && lic.enabled && (lic.pending || !lic.access)) refreshLicense(true); });
     setInterval(() => { if (location.href !== lastHref) { lastHref = location.href; onUrlChange(); } }, 800);

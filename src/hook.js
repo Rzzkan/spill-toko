@@ -1,6 +1,6 @@
 /* Spill Toko - berjalan di dunia halaman (MAIN) pada document_start.
- * Hanya MEMBACA salinan respons API yang sudah diminta halaman Shopee sendiri (tidak membuat permintaan baru),
- * mengekstrak data produk, lalu mengirimnya ke content script lewat window.postMessage. */
+ * Membaca salinan respons API yang diminta halaman Shopee sendiri dan data awal di HTML; permintaan aktif hanya untuk
+ * daftar produk toko, atas perintah content script dengan batas laju (lihat ALLOW di bawah). Mengekstrak data produk, lalu mengirimnya ke content script lewat window.postMessage. */
 (function () {
   'use strict';
   if (window.__spillHook) return;
@@ -48,7 +48,35 @@
       window.postMessage(msg, location.origin);
     } catch (_) { /* abaikan */ }
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', readInitial); else readInitial();
+  // Halaman toko/pencarian/kategori: data produk halaman pertama sudah ada di HTML (mfe-initial-data), baca tanpa permintaan baru.
+  function readInitialList() {
+    try {
+      if (!window.SpillApi || /-i\.\d+\.\d+|^\/product\//.test(location.pathname)) return;
+      const el = document.querySelector('script[type="text/mfe-initial-data"]');
+      if (!el || !el.textContent || el.textContent.length > 6e6) return;
+      const cards = window.SpillApi.cards(JSON.parse(el.textContent));
+      if (!cards.length) return;
+      const msg = { __spill: 'api', path: 'ssr-list', cards: cards, pdp: null };
+      queue.push(msg); window.postMessage(msg, location.origin);
+    } catch (_) { /* abaikan */ }
+  }
+  const boot = () => { readInitial(); readInitialList(); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+
+  // Permintaan aktif (eksperimen, dengan batas laju dari content script): hanya endpoint daftar produk toko yang diizinkan.
+  const ALLOW = /^\/api\/v4\/search\/search_items\?[A-Za-z0-9_=&.%-]{1,300}$/;
+  window.addEventListener('message', async (ev) => {
+    const d = ev.data;
+    if (ev.source !== window || !d || d.__spill !== 'fetch' || typeof d.url !== 'string' || !ALLOW.test(d.url)) return;
+    const reply = (o) => window.postMessage(Object.assign({ __spill: 'fetch-res', id: d.id }, o), location.origin);
+    try {
+      const r = await window.fetch(d.url, { credentials: 'include', headers: { Accept: 'application/json' } });
+      const t = await r.text();
+      let n = 0, err = null;
+      try { const j = JSON.parse(t); err = j && j.error ? String(j.error).slice(0, 40) : null; n = window.SpillApi ? window.SpillApi.cards(j).length : 0; } catch (_) { err = 'bukan JSON'; }
+      reply({ status: r.status, n: n, err: err });
+    } catch (e) { reply({ status: 0, n: 0, err: 'jaringan' }); }
+  });
 
   const of = window.fetch;
   if (typeof of === 'function') {

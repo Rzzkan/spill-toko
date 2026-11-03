@@ -1,9 +1,9 @@
 /* Spill Toko - popup ikon toolbar: saklar utama + tampilkan/sembunyikan kartu per jenis halaman. */
 (function () {
   'use strict';
-  const KEYS = ['shop', 'search', 'product', 'category'];
+  const KEYS = ['shop', 'search', 'product', 'category', 'active'];
   const $ = (id) => document.getElementById(id);
-  const DEF = { on: true, shop: true, search: true, product: true, category: true };
+  const DEF = { on: true, shop: true, search: true, product: true, category: true, active: true };
   let prefs = Object.assign({}, DEF);
 
   function paint() {

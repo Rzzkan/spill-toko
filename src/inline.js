@@ -465,7 +465,8 @@
     function progBar() {
       if (!prog) return '';
       const pct = prog.total ? Math.max(3, Math.min(100, Math.round((prog.done / prog.total) * 100))) : 3;
-      if (prog.state === 'run') return `<div class="prog run"><div class="pt"><span>⏳ Memindai semua produk di latar belakang — halaman ${Math.min(prog.done + 1, prog.total)} dari ${prog.total} · ${prog.found || 0}${prog.expect ? ' dari ±' + prog.expect : ''} produk terbaca</span><a data-act="stop">Hentikan</a></div><div class="pb"><i style="width:${pct}%"></i></div></div>`;
+      if (prog.state === 'err') return `<div class="prog err"><div class="pt"><span>⚠️ ${esc(prog.msg || 'Gagal')}</span><a data-act="dismiss">Tutup</a></div></div>`;
+      if (prog.state === 'run') return `<div class="prog run"><div class="pt"><span>⏳ ${prog.mode === 'api' ? 'Mengambil data semua produk toko —' : 'Memindai semua produk di latar belakang —'} halaman ${Math.min(prog.done + 1, prog.total)} dari ${prog.total} · ${prog.found || 0}${prog.expect ? ' dari ±' + prog.expect : ''} produk terbaca</span><a data-act="stop">Hentikan</a></div><div class="pb"><i style="width:${pct}%"></i></div></div>`;
       if (prog.state === 'blocked') return `<div class="prog err"><div class="pt"><span>⚠️ Dijeda: Shopee meminta verifikasi di tab scan. Selesaikan di sana, lalu <a data-act="staged">lanjutkan scan</a>. (${prog.found || 0} produk terbaca)</span></div></div>`;
       return `<div class="prog"><div class="pt"><span>✅ Scan selesai — ${prog.found || 0} produk terbaca dari ${prog.done} halaman.</span><a data-act="dismiss">Tutup</a></div></div>`;
     }
