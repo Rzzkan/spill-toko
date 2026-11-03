@@ -60,14 +60,15 @@
       const mid = item.priceMax && item.price != null ? (item.price + item.priceMax) / 2 : item.price;
       if (item.soldMonthly) return { sold: item.sold, omzet: mid != null ? item.sold * mid : null };
       const h = item.hist || [];
-      if (!h.length) return null;
+      const est = function () { const e = item.est30; return e ? { sold: e.sold, omzet: e.omzet, est: true, sample: e.sample, recent: e.recent } : null; };
+      if (!h.length) return est();
       const end = item.lastSeen || h[h.length - 1].t;
       const cutoff = end - 30 * 864e5;
       let b = h[0];
       h.forEach(function (e) { if (e.t <= cutoff) b = e; });
       const cur = h[h.length - 1];
       const days = (end - b.t) / 864e5;
-      if (days < 0.5 || b.m !== cur.m) return null;
+      if (days < 0.5 || b.m !== cur.m) return est();
       const sold = Math.max(0, (cur.sold - b.sold) / days * 30);
       return { sold: sold, omzet: mid != null ? sold * mid : null };
     },

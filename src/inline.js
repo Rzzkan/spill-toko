@@ -288,14 +288,17 @@
         ['Rating', p.rating != null ? `★ ${p.rating.toFixed(1)} (${cnt(p.ratingCount)} penilaian)` : '–'],
         ['Toko', p.shopUrl ? `<a href="${esc(p.shopUrl)}" target="_blank" rel="noopener">${esc(p.shopName || 'Lihat toko')}</a>` : esc(p.shopName || '–')]]);
       const r = d.rate;
-      const sec2 = rows([['Omset 30 hari', r && r.omzet != null ? full(r.omzet) : '–'], ['Terjual 30 hari', r ? cnt(r.sold) : '–'], ['Trend 30 hari', trendTxt(d.trendPct)]]);
+      const estTag = r && r.est ? ' <small style="color:#d97706">(estimasi)</small>' : '';
+      const sec2 = rows([['Omset 30 hari', r && r.omzet != null ? full(r.omzet) + estTag : '–'], ['Terjual 30 hari', r ? cnt(r.sold) + estTag : '–'], ['Trend 30 hari', trendTxt(d.trendPct)]]);
       const sec3 = rows([['Wishlist', p.favorit != null ? '❤ ' + cnt(p.favorit) : '–'], ['Nilai Jual Stok', mid != null && p.stock != null ? full(mid * p.stock) : 'n/a'],
         ['Komplain (★1–2)', p.complaintPct != null ? p.complaintPct.toString().replace('.', ',') + '%' : '–'],
         ['Varian', p.variants && p.variants.length ? p.variants.map((v) => esc(v.name) + ' (' + v.options.length + ')').join(', ') : '–']]);
       const sec4 = rows([['Total Omset (est.)', full(p.omzet)], ['Total Terjual', cnt(p.sold) + (p.soldPlus ? '+' : '') + (p.soldMonthly ? ' /bulan' : '')]]);
       return '<div class="body" style="padding:14px 0 6px"><div class="sec"><h5>Informasi Umum</h5>' + sec1 + '</div><div class="sec"><h5>Trend</h5>' + sec2 +
         '</div><div class="sec"><h5>Potensi dan Performa</h5>' + sec3 + '</div><div class="sec"><h5>Statistik Total</h5>' + sec4 + '</div>' + actRow() +
-        '<div class="note" style="margin:0 14px 8px">Total terjual dibulatkan Shopee (mis. “10RB+”), jadi total omset adalah batas bawah. Data 30 hari terisi setelah produk ini di-scan lagi di hari berbeda.</div></div>';
+        '<div class="note" style="margin:0 14px 8px">Total terjual dibulatkan Shopee (mis. “10RB+”), jadi total omset adalah batas bawah. ' +
+        (d.rate && d.rate.est ? 'Angka 30 hari adalah <b>estimasi kasar</b> dari tanggal ulasan (' + d.rate.recent + ' dari ' + d.rate.sample + ' ulasan sampel dalam 30 hari terakhir; sampel ulasan Shopee tidak berurutan waktu, jadi bisa meleset); lebih akurat setelah produk di-scan lagi di hari berbeda.' : 'Data 30 hari terisi setelah produk ini di-scan lagi di hari berbeda.') +
+        '</div></div>';
     }
 
     function actRow() {

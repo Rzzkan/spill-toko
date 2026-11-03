@@ -422,6 +422,7 @@
         while (Date.now() - t0 < 20000 && P.parseProductPage(document, location.href).price == null) { window.scrollBy(0, 250); await sleep(700); }
         if (inWin && P.parseProductPage(document, location.href).price == null) { send({ type: 'spill-show-runner' }); await sleep(8000); }
         await scrollThrough(null, 12000);
+        await collectReviews();
         window.scrollTo(0, 0); await sleep(400);
         readDetail();
         n = (await saveDetail()) ? 1 : 0;
@@ -459,8 +460,31 @@
   }
 
   // ---------- detail produk ----------
+  // Baca tanggal ulasan (halaman 1-5) untuk estimasi penjualan 30 hari.
+  let reviewDates = [], reviewTotal = 0;
+  async function collectReviews() {
+    const dates = new Set(), keyOf = (t) => t;
+    const grab = () => { const r = P.parseReviews(document); r.dates.forEach((t) => dates.add(keyOf(t))); if (r.total) reviewTotal = r.total; };
+    try {
+      const anchor = Array.from(document.querySelectorAll('*')).find((e) => e.children.length === 0 && /^Penilaian Produk$/i.test((e.textContent || '').trim()));
+      if (anchor) { anchor.scrollIntoView({ block: 'start' }); await sleep(900); }
+      grab();
+      for (let p = 2; p <= 5; p++) {
+        const btn = Array.from(document.querySelectorAll('button')).find((b) => (b.textContent || '').trim() === String(p) && !b.disabled);
+        if (!btn) break;
+        btn.click(); await sleep(1300); grab();
+      }
+    } catch (_) { /* abaikan */ }
+    reviewDates = Array.from(dates);
+  }
+
   function readDetail() {
     detail = P.parseProductPage(document, location.href);
+    if (reviewDates.length) {
+      const total = reviewTotal || detail.ratingCount;
+      const e = P.estimate30(reviewDates, total, detail.sold, detail.price, detail.priceMax, Date.now());
+      if (e) detail.est30 = e;
+    }
     competitors = enrich(P.parseAll(document).filter((r) => r.key !== detail.key)).sort((a, b) => (b.omzet || 0) - (a.omzet || 0)).slice(0, 10);
     ui.setDetail(detail);
     return detail;
@@ -521,6 +545,7 @@
     ui.setStatus('Scroll untuk memuat varian, ulasan & produk serupa…');
     try {
       await scrollThrough(null, 12000);
+      await collectReviews();
       window.scrollTo(0, 0); await sleep(400);
       await readAndSave();
       ui.setStatus('Detail terbaca & disimpan.', 'ok');

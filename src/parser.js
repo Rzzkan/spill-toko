@@ -414,6 +414,35 @@
   }
 
   // Diagnosa untuk developer: struktur HTML 3 kartu pertama + hasil parse (tanpa data pribadi).
+  // Ulasan yang tampil di halaman produk: tanggal ("2026-04-19 08:42") + total penilaian (jumlah per bintang).
+  function parseReviews(doc) {
+    const text = getText(doc.body);
+    const seen = {}, out = [];
+    const re = /([^\n]{2,40})\n\s*(20\d\d)-(\d\d)-(\d\d)(?:\s+(\d\d):(\d\d))?/g;
+    let m;
+    while ((m = re.exec(text))) {
+      const t = new Date(+m[2], +m[3] - 1, +m[4], +(m[5] || 12), +(m[6] || 0)).getTime();
+      const id = m[1].trim() + '|' + t;
+      if (!seen[id] && !isNaN(t)) { seen[id] = 1; out.push(t); }
+    }
+    let total = 0;
+    const sm = text.match(/Semua\s*((?:\d\s*Bintang\s*\(\s*[\d.,]+\s*\)\s*){1,5})/i);
+    if (sm) sm[1].replace(/\(\s*([\d.,]+)\s*\)/g, function (x, n) { total += parseInt(String(n).replace(/[.,]/g, ''), 10) || 0; return x; });
+    return { dates: out, total: total };
+  }
+
+  // Estimasi penjualan 30 hari dari sebaran tanggal ulasan (kasar; ulasan hanya sampel).
+  function estimate30(dates, ratingTotal, soldTotal, price, priceMax, now) {
+    if (!dates || dates.length < 6 || !ratingTotal || !soldTotal) return null;
+    const cutoff = (now || Date.now()) - 30 * 864e5;
+    const k = dates.filter(function (t) { return t >= cutoff; }).length;
+    const ratio = Math.min(1, ratingTotal / soldTotal);          // porsi pembeli yang menulis penilaian
+    const share = (k + 0.5) / (dates.length + 1);                  // smoothing: sampel kecil tidak langsung 0 / 100%
+    const sold = Math.round(ratingTotal * share / Math.max(0.05, ratio));
+    const mid = priceMax && price != null ? (price + priceMax) / 2 : price;
+    return { sold: sold, omzet: mid != null ? sold * mid : null, sample: dates.length, recent: k, ratings: ratingTotal, at: now || Date.now() };
+  }
+
   function diagnose(doc) {
     const cards = findCards(doc).slice(0, 3);
     return {
@@ -440,7 +469,7 @@
   }
 
   return {
-    diagnose: diagnose, parseCount: parseCount, parseRupiah: parseRupiah, parseSold: parseSold, priceFromText: priceFromText,
+    parseReviews: parseReviews, estimate30: estimate30, diagnose: diagnose, parseCount: parseCount, parseRupiah: parseRupiah, parseSold: parseSold, priceFromText: priceFromText,
     idsFromHref: idsFromHref, pageType: pageType, nextPageUrl: nextPageUrl, isBlockedPage: isBlockedPage,
     findCards: findCards, parseCard: parseCard, parseAll: parseAll,
     parseProductPage: parseProductPage, parseShopInfo: parseShopInfo, shopSummary: shopSummary
