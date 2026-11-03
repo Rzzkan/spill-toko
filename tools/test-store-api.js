@@ -30,5 +30,9 @@ let fail = 0; const eq = (n, g, w) => { const ok = JSON.stringify(g) === JSON.st
   eq('api30=0 & sold>0 pakai bulan toko', JSON.stringify(S.rate30({ sold: 600, api30: 0, price: 1000 }, 6)), JSON.stringify({ sold: 100, omzet: 100000, est: true, life: true }));
   eq('api30=0 & sold>0 pakai ctime', Math.round(S.rate30({ sold: 600, api30: 0, price: 1000, ctime: Date.now() / 1000 - 6 * 30 * 86400 }).sold), 100);
   eq('api30=0 & sold=0 tetap 0', S.rate30({ sold: 0, api30: 0, price: 1000 }).sold, 0);
+  // API mengirim sold=0 (tidak diketahui) lalu DOM menampilkan "10RB+": angka DOM harus dipakai
+  await S.upsert([{ key: '5.5', shopId: '5', itemId: '5', name: 'D', price: 39000, sold: 0, api30: 0, via: 'api' }], { source: 'api' });
+  await S.upsert([{ key: '5.5', shopId: '5', itemId: '5', name: 'D', price: 39000, sold: 10000, soldPlus: true, omzet: 390000000 }], { source: 'dom' });
+  eq('sold API 0 tidak memblokir angka DOM', (await S.items())['5.5'].sold, 10000);
   if (fail) process.exit(1); console.log('Semua lolos');
 })();

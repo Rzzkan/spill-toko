@@ -29,6 +29,8 @@
       if (num(o.price_max) != null && o.price_max > o.price_min) priceMax = o.price_max / UNIT;
       if (price == null && num(o.price) != null) price = o.price / UNIT;
     }
+    // Beberapa API (mis. halaman toko) mengirim 0 padahal produk laku ribuan: 0 dianggap "tidak diketahui", bukan terjual 0.
+    if (sold === 0) { sold = null; if (api30 === 0) api30 = null; }
     if (sold == null && price == null && !a.name && !o.name) return null;
 
     const rc = o.item_rating && Array.isArray(o.item_rating.rating_count) ? num(o.item_rating.rating_count[0]) : null;

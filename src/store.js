@@ -18,7 +18,7 @@
         let r = r0;
         // data dari API Shopee (angka pasti) tidak ditimpa angka tampilan yang dibulatkan dari DOM
         if (r0.via === 'api') { r = Object.assign({}, r0, { apiAt: now }); if (r.api30 != null) r.api30At = now; }
-        else if (old && old.apiAt && now - old.apiAt < 6 * 36e5) {
+        else if (old && old.apiAt && old.sold > 0 && now - old.apiAt < 6 * 36e5) {
           r = Object.assign({}, r0);
           ['sold', 'soldMonthly', 'soldPlus', 'omzet', 'price', 'priceMax'].forEach(function (k) { delete r[k]; });
         }
