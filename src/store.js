@@ -66,14 +66,25 @@
     },
 
     // estimasi penjualan 30 hari dari riwayat scan (atau angka "/bulan" bila Shopee menampilkannya)
-    rate30(item) {
+    rate30(item, fbMonths) {
       if (item.sold == null) return null;
       const mid0 = item.priceMax && item.price != null ? (item.price + item.priceMax) / 2 : item.price;
-      if (item.api30 != null) return { sold: item.api30, omzet: mid0 != null ? item.api30 * mid0 : null, api: true };
+      // api30=0 padahal total terjual >0 = Shopee tidak mengirim angka bulanan (bukan benar-benar nol) -> pakai estimasi
+      if (item.api30 != null && !(item.api30 === 0 && item.sold > 0)) return { sold: item.api30, omzet: mid0 != null ? item.api30 * mid0 : null, api: true };
       const mid = item.priceMax && item.price != null ? (item.price + item.priceMax) / 2 : item.price;
       if (item.soldMonthly) return { sold: item.sold, omzet: mid != null ? item.sold * mid : null };
       const h = (item.hist || []).filter(function (e) { return e.x; });   // hanya angka pasti dari API (angka DOM dibulatkan)
-      const est = function () { const e = item.est30; return e ? { sold: e.sold, omzet: e.omzet, est: true, sample: e.sample, recent: e.recent } : null; };
+      const est = function () {
+        const e = item.est30;
+        if (e) return { sold: e.sold, omzet: e.omzet, est: true, sample: e.sample, recent: e.recent };
+        // cadangan: rata-rata per bulan sejak produk dibuat (atau sejak toko bergabung) agar tidak tampil 0
+        if (!(item.sold > 0)) return null;
+        let mo = item.ctime ? (Date.now() / 1000 - item.ctime) / (30 * 86400) : (fbMonths || 0);
+        if (!(mo > 0)) return null;
+        mo = Math.max(1, mo);
+        const sold = item.sold / mo;
+        return { sold: sold, omzet: mid != null ? sold * mid : null, est: true, life: true };
+      };
       if (!h.length) return est();
       const end = item.lastSeen || h[h.length - 1].t;
       const cutoff = end - 30 * 864e5;

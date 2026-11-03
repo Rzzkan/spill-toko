@@ -25,5 +25,10 @@ let fail = 0; const eq = (n, g, w) => { const ok = JSON.stringify(g) === JSON.st
   eq('trend lokal: snapshot terlalu baru diabaikan', S.trend({ api30: 100, mh: [{ t: Date.now() - 5 * D, m: 80 }] }), null);
   eq('trend dari server', JSON.stringify(S.trend({ api30: 50, prev30: { m: 100 } })), JSON.stringify({ cur: 50, prev: 100 }));
   eq('tanpa api30: tidak ada trend', S.trend({ prev30: { m: 100 } }), null);
+  // api30=0 padahal total terjual >0 -> estimasi, bukan 0
+  eq('api30=0 & sold>0 tanpa dasar bulan: null', S.rate30({ sold: 600, api30: 0, price: 1000 }), null);
+  eq('api30=0 & sold>0 pakai bulan toko', JSON.stringify(S.rate30({ sold: 600, api30: 0, price: 1000 }, 6)), JSON.stringify({ sold: 100, omzet: 100000, est: true, life: true }));
+  eq('api30=0 & sold>0 pakai ctime', Math.round(S.rate30({ sold: 600, api30: 0, price: 1000, ctime: Date.now() / 1000 - 6 * 30 * 86400 }).sold), 100);
+  eq('api30=0 & sold=0 tetap 0', S.rate30({ sold: 0, api30: 0, price: 1000 }).sold, 0);
   if (fail) process.exit(1); console.log('Semua lolos');
 })();

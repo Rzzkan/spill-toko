@@ -106,8 +106,8 @@
         a.basisSold += i.sold; a.basisOmzet += i.omzet || 0;
         if (!i.soldMonthly) { a.totalSold += i.sold; a.totalOmzet += i.omzet || 0; a.hasTotal = true; }
       }
-      const r = S.rate30(i);
-      if (r) { a.sold30 += r.sold; a.omzet30 += r.omzet || 0; a.have30++; }
+      const r = S.rate30(i, months);
+      if (r) { a.sold30 += r.sold; a.omzet30 += r.omzet || 0; a.have30++; if (r.est) a.est30n = (a.est30n || 0) + 1; }
       const t = S.trend(i);
       if (t && mid != null) { a.cur += t.cur; a.prev += t.prev; a.omCur += t.cur * mid; a.omPrev += t.prev * mid; a.haveT++; }
     });
@@ -134,10 +134,11 @@
     return allItems.filter((i) => i.source === src || pageKeys.has(i.key));
   }
 
+  const enrichMonths = null;
   function enrich(items, shopNames) {
     const totalOm = items.reduce((s, i) => s + (i.omzet || 0), 0);
     return items.map((i) => {
-      const r = S.rate30(i), t = S.trend(i);
+      const r = S.rate30(i, enrichMonths), t = S.trend(i);
       return Object.assign({}, i, {
         sold30: r ? r.sold : null, omzet30: r ? r.omzet : null,
         trendPct: t && t.prev > 0 ? ((t.cur - t.prev) / t.prev) * 100 : null,
