@@ -50,6 +50,7 @@
   .sec{margin:0 14px 14px}.sec h5{margin:0 0 8px;font-size:14px;color:#111}
   .r{display:flex;padding:5px 0;font-size:14px}.r>span:first-child{width:34%;color:#333;flex:none}.r>span:last-child{flex:1;color:#222}
   .r a{color:#1a73e8}
+  .comp{padding:4px 0}.cc{display:flex;gap:12px;align-items:center;padding:8px 4px}.cc img,.ci{width:58px;height:58px;border-radius:4px;object-fit:cover;background:#eee;flex:none}.cb{min-width:0;flex:1}.ct{display:block;font-weight:600;color:#111;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cs{color:#374151;margin:2px 0}.sb{font-style:normal;background:#ee4d2d;color:#fff;border-radius:2px;padding:0 4px;font-size:10px;margin-right:6px}.cm{display:flex;gap:16px;flex-wrap:wrap;color:#374151}
   .chip{display:inline-block;background:#fff;border:1px solid #ddd;border-radius:999px;padding:2px 10px;margin:2px 4px 2px 0;font-size:12px}
   .bar{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:13px}.bar i{display:block;height:10px;background:#f7b500;border-radius:3px}
   .bar u{width:46px;text-decoration:none;flex:none}.bar em{font-style:normal;color:#666;margin-left:4px}
@@ -150,6 +151,7 @@
     const cardEl = sr.getElementById('card');
     let payload = null, placedKind = null, busyText = null, L = null, plansOpen = false, lbusy = null, lerr = null;
     const tabs = { shop: 'ringkasan', search: 'ringkasan', product: 'transaksi' };
+    let compAll = false;
 
     const leaf = (re, maxTop) => Array.prototype.find.call(document.querySelectorAll('div,span,a,li,p,h1,h2,h3,section'), (el) =>
       el.children.length === 0 && re.test((el.textContent || '').trim()) && (!maxTop || el.getBoundingClientRect().top + window.scrollY < maxTop));
@@ -289,7 +291,26 @@
         return h2 + '</div>' + actRow() + '</div>';
       }
       if (t === 'kompetitor') {
-        return '<div class="body">' + topTable(d.competitors || [], 'Produk serupa di halaman ini') + '<div class="note">Diambil dari produk serupa/rekomendasi yang tampil di halaman produk ini.</div>' + actRow() + '</div>';
+        const cs = d.competitors || [];
+        if (!cs.length) return '<div class="body">' + topTable([], '') + actRow() + '</div>';
+        const shown = compAll ? cs : cs.slice(0, 4);
+        const perMon = (r) => {
+          if (r.ctime && r.sold != null && !r.soldMonthly) return r.sold / Math.max(1, (Date.now() - r.ctime * 1000) / (30.44 * 864e5));
+          if (r.soldMonthly && r.sold != null) return r.sold;
+          return null;
+        };
+        const card = (r) => {
+          const pm = perMon(r), star = (r.badges || []).indexOf('Mall') >= 0 ? 'Mall' : ((r.badges || []).indexOf('Star') >= 0 ? 'Star+' : '');
+          return '<div class="cc">' + (r.image ? '<img src="' + esc(r.image) + '">' : '<span class="ci"></span>') +
+            '<div class="cb"><a class="ct" href="' + esc(r.url) + '" target="_blank" rel="noopener">' + esc((r.name || '').slice(0, 110)) + '</a>' +
+            '<div class="cs">' + (star ? '<em class="sb">' + star + '</em>' : '') + esc(r.shopName || r.location || '') + '</div>' +
+            '<div class="cm"><span>' + (r.price == null ? '–' : full(r.price)) + '</span>' +
+            (r.rating != null ? '<span>★ ' + String(r.rating).replace('.', ',') + (r.ratingCount != null ? ' (' + cnt(r.ratingCount) + ')' : '') + '</span>' : '') +
+            '<span>' + (pm != null ? 'Terjual ' + cnt(Math.round(pm)) + ' / bln' : (r.sold != null ? 'Terjual ' + cnt(r.sold) + (r.soldPlus ? '+' : '') + (r.soldMonthly ? ' / bln' : '') : '')) + '</span></div></div></div>';
+        };
+        return '<div class="body"><div class="comp">' + shown.map(card).join('') + '</div>' +
+          (cs.length > 4 ? '<div style="text-align:center;padding:6px 0 10px"><button class="btn" data-act="compmore">' + (compAll ? 'Tampilkan lebih sedikit' : 'Tampilkan Produk Lainnya') + '</button></div>' : '') +
+          '<div class="note">Produk serupa yang tampil di halaman ini, diurutkan dari omset terbesar. Terjual / bln dihitung dari total terjual dibagi umur produk bila tanggal dibuat diketahui.</div>' + actRow() + '</div>';
       }
       if (t === 'varian') {
         let h2 = '<div class="body"><div class="sec">';
@@ -449,6 +470,7 @@
       else if (act === 'refresh') h.onRefresh(payload.kind);
       else if (act === 'panel') h.onPanel();
       else if (act === 'multi') h.onMulti(3);
+      else if (act === 'compmore') { compAll = !compAll; draw(); }
     });
 
     // ---------- modal Analisa Detail ----------

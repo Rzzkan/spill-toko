@@ -586,6 +586,17 @@
       if (e) detail.est30 = e;
     }
     competitors = enrich(P.parseAll(document).filter((r) => r.key !== detail.key)).sort((a, b) => (b.omzet || 0) - (a.omzet || 0)).slice(0, 10);
+    // lengkapi kompetitor dengan data pasti yang sudah tersimpan (tanggal dibuat, total terjual pasti)
+    competitors = competitors.map((c) => {
+      const st = allItems.find((i) => i.key === c.key);
+      if (!st) return c;
+      const o = Object.assign({}, c);
+      if (st.ctime != null) o.ctime = st.ctime;
+      if (st.via === 'api' && st.sold != null && !st.soldMonthly) { o.sold = st.sold; o.soldPlus = false; o.soldMonthly = false; }
+      if (st.ratingCount != null && o.ratingCount == null) o.ratingCount = st.ratingCount;
+      if (st.rating != null && o.rating == null) o.rating = st.rating;
+      return o;
+    });
     ui.setDetail(detail);
     return detail;
   }
