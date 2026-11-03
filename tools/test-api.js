@@ -44,4 +44,11 @@ eq('pdp: field', [pdp.key, pdp.price, pdp.priceMax, pdp.ratingCount, pdp.favorit
 
 eq('json kosong', A.cards({}).length, 0);
 eq('pdp tanpa item', A.pdp({ data: {} }), null);
+const pv = A.pdp({ data: { item: { item_id: 2, shop_id: 1, title: 'V', stock: 1483,
+  tier_variations: [{ name: 'Warna', options: ['Pink'] }, { name: 'Ukuran', options: ['100', '110'] }],
+  models: [{ extinfo: { tier_index: [0, 0] }, sold: 30, normal_stock: 5 }, { extinfo: { tier_index: [0, 1] }, sold: 70, normal_stock: 5 }] } } });
+eq('pdp: stok', pv.stock, 1483);
+eq('pdp: varian %', JSON.stringify(pv.variantSales), JSON.stringify([{ name: 'Warna', opts: [{ o: 'Pink', sold: 100 }] }, { name: 'Ukuran', opts: [{ o: '100', sold: 30 }, { o: '110', sold: 70 }] }]));
+const pv2 = A.pdp({ data: { item: { item_id: 3, shop_id: 1, title: 'W', models: [{ normal_stock: 4 }, { normal_stock: 6 }] } } });
+eq('pdp: stok dari jumlah model, tanpa varian', [pv2.stock, pv2.variantSales], [10, null]);
 if (fail) { console.log(fail + ' GAGAL'); process.exit(1); } console.log('Semua lolos');

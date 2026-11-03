@@ -86,7 +86,32 @@
       else if (num(pr.range_min) != null) { price = pr.range_min / UNIT; if (num(pr.range_max) != null && pr.range_max > pr.range_min) priceMax = pr.range_max / UNIT; }
     }
     const exact = num(rv.historical_sold) != null ? rv.historical_sold : null;
+    // stok & penjualan per varian (bila Shopee menyertakannya di respons halaman produk)
+    const models = Array.isArray(it.models) ? it.models : (Array.isArray(d.models) ? d.models : []);
+    const mstock = function (m) { const v = num(m.normal_stock) != null ? m.normal_stock : num(m.stock); return v; };
+    let stock = num(it.normal_stock) != null ? it.normal_stock : num(it.stock);
+    if (stock == null && models.length) { let sum = 0, any = false; models.forEach(function (m) { const v = mstock(m); if (v != null) { sum += v; any = true; } }); if (any) stock = sum; }
+    const tiers = Array.isArray(it.tier_variations) ? it.tier_variations : (Array.isArray(d.tier_variations) ? d.tier_variations : []);
+    let variantSales = null;
+    if (tiers.length && models.length) {
+      const out = [];
+      tiers.forEach(function (t, ti) {
+        const opts = Array.isArray(t.options) ? t.options : [];
+        const rows = opts.map(function (o, oi) {
+          let sold = 0;
+          models.forEach(function (m) {
+            const idx = (m.extinfo && m.extinfo.tier_index) || m.tier_index;
+            const ms = num(m.sold) != null ? m.sold : num(m.historical_sold);
+            if (Array.isArray(idx) && idx[ti] === oi && ms != null) sold += ms;
+          });
+          return { o: str(o, 40), sold: sold };
+        });
+        if (rows.some(function (r) { return r.sold > 0; })) out.push({ name: str(t.name, 30), opts: rows.slice(0, 40) });
+      });
+      if (out.length) variantSales = out;
+    }
     return {
+      stock: stock, variantSales: variantSales, schema: Object.keys(it).slice(0, 80),
       key: shopId + '.' + itemId, shopId: shopId, itemId: itemId, name: str(it.title, 200),
       price: price, priceMax: priceMax, rating: num(rv.rating_star) != null ? Math.round(rv.rating_star * 10) / 10 : null,
       ratingCount: num(rv.total_rating_count), favorit: num(rv.liked_count), ctime: num(it.ctime),

@@ -294,20 +294,25 @@
       if (t === 'varian') {
         let h2 = '<div class="body"><div class="sec">';
         h2 += p.variants && p.variants.length ? p.variants.map((v) => `<h5>${esc(v.name)}</h5><div>${v.options.map((o) => `<span class="chip">${esc(o)}</span>`).join('')}</div>`).join('') : '<div class="empty">Varian belum terbaca. Klik Analisa.</div>';
-        return h2 + '<div class="note">Persentase penjualan per varian tidak ditampilkan Shopee di halaman produk, jadi tidak bisa dihitung dari tampilan.</div></div>' + actRow() + '</div>';
+        return h2 + (p.variantSales && p.variantSales.length ? '<div class="note">Persentase penjualan per varian dari data Shopee.</div>' : '<div class="note">Persentase penjualan per varian hanya tampil bila Shopee menyertakannya untuk produk ini.</div>') + '</div>' + actRow() + '</div>';
       }
       // transaksi
       const mid = p.priceMax && p.price != null ? (p.price + p.priceMax) / 2 : p.price;
-      const sec1 = rows([['Harga', rangeTxt(p.price, p.priceMax)], ['Stok', cnt(p.stock)],
+      const addedMs = p.ctime ? p.ctime * 1000 : null;
+      const months = addedMs ? Math.max(1, (Date.now() - addedMs) / (30.44 * 864e5)) : null;
+      const perMonth = months && p.sold != null && !p.soldMonthly ? p.sold / months : null;
+      const vsTxt = p.variantSales && p.variantSales.length ? p.variantSales.map((v) => { const tot = v.opts.reduce((a, o) => a + o.sold, 0) || 1; return '<b>' + esc(v.name) + '</b><br>' + v.opts.filter((o) => o.sold > 0).sort((a, b) => b.sold - a.sold).map((o) => esc(o.o) + ' (' + Math.round((o.sold / tot) * 100) + '%)').join(', '); }).join('<br>') : null;
+      const sec1 = rows([['Ditambahkan', addedMs ? fmtDate(addedMs).slice(0, 11) : '–'], ['Harga', rangeTxt(p.price, p.priceMax)], ['Stok', cnt(p.stock)],
         ['Rating', p.rating != null ? `★ ${p.rating.toFixed(1)} (${cnt(p.ratingCount)} penilaian)` : '–'],
         ['Toko', p.shopUrl ? `<a href="${esc(p.shopUrl)}" target="_blank" rel="noopener">${esc(p.shopName || 'Lihat toko')}</a>` : esc(p.shopName || '–')]]);
       const r = d.rate;
       const estTag = r && r.est ? ' <small style="color:#d97706">(estimasi)</small>' : '';
-      const sec2 = rows([['Omset 30 hari', r && r.omzet != null ? full(r.omzet) + estTag : '–'], ['Terjual 30 hari', r ? cnt(r.sold) + estTag : '–'], ['Trend 30 hari', trendTxt(d.trendPct)]]);
+      const sec2 = rows([['Omset / Bulan', perMonth != null && mid != null ? full(perMonth * mid) : '–'], ['Terjual / Bulan', perMonth != null ? cnt(Math.round(perMonth)) : '–'], ['Omset 30 hari', r && r.omzet != null ? full(r.omzet) + estTag : '–'], ['Terjual 30 hari', r ? cnt(r.sold) + estTag : '–'], ['Trend 30 hari', trendTxt(d.trendPct)]]);
       const sec3 = rows([['Wishlist', p.favorit != null ? '❤ ' + cnt(p.favorit) : '–'], ['Nilai Jual Stok', mid != null && p.stock != null ? full(mid * p.stock) : 'n/a'],
         ['Komplain (★1–2)', p.complaintPct != null ? p.complaintPct.toString().replace('.', ',') + '%' : '–'],
+        ['Penjualan Varian', vsTxt || '<span style="color:#9ca3af">tidak disediakan Shopee untuk produk ini</span>'],
         ['Varian', p.variants && p.variants.length ? p.variants.map((v) => esc(v.name) + ' (' + v.options.length + ')').join(', ') : '–']]);
-      const sec4 = rows([['Total Omset (est.)', full(p.omzet)], ['Total Terjual', cnt(p.sold) + (p.soldPlus ? '+' : '') + (p.soldMonthly ? ' /bulan' : '')]]);
+      const sec4 = rows([['Total Omset (est.)', full(p.omzet)], ['Total Terjual', cnt(p.sold) + (p.soldPlus ? '+' : '') + (p.soldMonthly ? ' /bulan' : '') + (p.soldExact ? ' <small style="color:#16a34a">(pasti)</small>' : '')]]);
       return '<div class="body" style="padding:14px 0 6px"><div class="sec"><h5>Informasi Umum</h5>' + sec1 + '</div><div class="sec"><h5>Trend</h5>' + sec2 +
         '</div><div class="sec"><h5>Potensi dan Performa</h5>' + sec3 + '</div><div class="sec"><h5>Statistik Total</h5>' + sec4 + '</div>' + actRow() +
         '<div class="note" style="margin:0 14px 8px">Total terjual dibulatkan Shopee (mis. “10RB+”), jadi total omset adalah batas bawah. ' +

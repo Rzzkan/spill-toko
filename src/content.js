@@ -565,6 +565,16 @@
 
   function readDetail() {
     detail = P.parseProductPage(document, location.href);
+    // lengkapi dengan data pasti dari API yang sudah tersimpan (stok, penjualan varian, total terjual pasti)
+    const st = allItems.find((i) => i.key === detail.key);
+    if (st) {
+      ['stock', 'variantSales', 'ctime'].forEach((k) => { if (detail[k] == null && st[k] != null) detail[k] = st[k]; });
+      if (st.via === 'api' && st.sold != null && !st.soldMonthly && st.apiAt && Date.now() - st.apiAt < 24 * 36e5 && (detail.soldPlus || detail.sold == null || st.sold >= detail.sold)) {
+        const mid = detail.priceMax && detail.price != null ? (detail.price + detail.priceMax) / 2 : detail.price;
+        detail.sold = st.sold; detail.soldPlus = false; detail.soldMonthly = false; detail.soldExact = true;
+        if (mid != null) detail.omzet = st.sold * mid;
+      }
+    }
     if (reviewDates.length) {
       const total = reviewTotal || detail.ratingCount;
       const e = P.estimate30(reviewDates, total, detail.sold, detail.price, detail.priceMax, Date.now());
@@ -738,6 +748,9 @@
           const p = d.pdp, n = (x) => (typeof x === 'number' && isFinite(x) ? x : null);
           const rec = { key: p.key, shopId: p.key.split('.')[0], itemId: p.key.split('.')[1], url: 'https://shopee.co.id/product/' + p.key.split('.')[0] + '/' + p.key.split('.')[1],
             name: typeof p.name === 'string' ? p.name.slice(0, 200) : '', price: n(p.price), priceMax: n(p.priceMax), rating: n(p.rating), ratingCount: n(p.ratingCount), favorit: n(p.favorit), ctime: n(p.ctime) };
+          if (n(p.stock) != null) rec.stock = p.stock;
+          if (Array.isArray(p.variantSales)) rec.variantSales = p.variantSales.slice(0, 4).map((v) => ({ name: String(v.name || '').slice(0, 30), opts: (Array.isArray(v.opts) ? v.opts : []).slice(0, 40).map((o) => ({ o: String(o.o || '').slice(0, 40), sold: n(o.sold) || 0 })) }));
+          if (Array.isArray(p.schema)) { try { chrome.storage.local.set({ last_pdp_keys: { at: Date.now(), keys: p.schema.slice(0, 80).map((k) => String(k).slice(0, 40)) } }); } catch (_) { /* abaikan */ } }
           if (n(p.soldExact) != null) { rec.sold = p.soldExact; rec.soldMonthly = false; rec.soldPlus = false; rec.via = 'api'; }
           recs.push(rec);
         }
