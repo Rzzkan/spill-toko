@@ -21,6 +21,9 @@
     let price = num(dp.price) != null && dp.price > 0 ? dp.price / UNIT : null;
     let priceMax = null;
     let sold = num(ds.historical_sold_count), api30 = num(ds.monthly_sold_count);
+    // skema "rounded_*" (halaman toko / SSR): total & 30 hari pasti pada kolom berbeda
+    if (!sold) sold = num(ds.rounded_global_historical_sold_count) || num(ds.rounded_local_historical_sold_count) || num(ds.rounded_display_sold_count) || num(ds.display_sold_count) || sold;
+    if (!api30) api30 = num(ds.rounded_local_monthly_sold_count) || api30;
     // skema lama (item_basic)
     if (o.historical_sold != null || o.price_min != null) {
       if (sold == null) sold = num(o.historical_sold);
