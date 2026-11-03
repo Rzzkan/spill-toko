@@ -39,7 +39,7 @@
   .body{background:#f7f7f7;border-radius:4px;padding:18px 8px}
   .metrics{display:flex;align-items:center;flex-wrap:wrap;row-gap:14px}
   .m{flex:1;min-width:140px;text-align:center;padding:2px 10px;border-left:1px solid #e3e3e3}.m:first-child{border-left:0}
-  .m b{display:block;font-size:15px;margin-bottom:10px;color:#111}.m span{font-size:15px;color:#333}
+  .m b{display:block;font-size:15px;margin-bottom:10px;color:#111}.m span{font-size:15px;color:#333}.m .sub{display:block;margin-top:6px;font-size:11.5px;line-height:1.4;color:#8a8a8a}
   .m.lv b{order:2;font-weight:400;margin:10px 0 0}.m.lv{display:flex;flex-direction:column}.m.lv span{order:1;font-weight:600}
   .act{width:170px;text-align:center;flex:none;border-left:1px solid #e3e3e3;padding:4px 10px}
   .btn{background:#d9541e;color:#fff;border:0;border-radius:4px;padding:11px 20px;font-size:15px;cursor:pointer;position:relative}
@@ -218,7 +218,7 @@
     setInterval(() => { if (payload && !host.isConnected) place(); }, 1500);
 
     // ---------- badan kartu ----------
-    const metrics = (m, extra) => '<div class="metrics">' + m.map((x) => `<div class="m${extra ? ' lv' : ''}"><b>${esc(x[0])}</b><span>${esc(x[1])}</span></div>`).join('');
+    const metrics = (m, extra) => '<div class="metrics">' + m.map((x) => `<div class="m${extra ? ' lv' : ''}"><b>${esc(x[0])}</b><span>${esc(x[1])}</span>${x[2] ? '<small class="sub">' + esc(x[2]) + '</small>' : ''}</div>`).join('');
 
     function actCol(label) {
       const busy = !!busyText;
@@ -236,9 +236,17 @@
       const s = d.stats;
       if (tab === 'ringkasan') {
         const has30 = s && s.have30;
+        const sub = (trend) => {
+          if (!has30) return '';
+          const parts = [];
+          if (trend != null) parts.push((trend >= 0 ? '▲ ' : '▼ ') + Math.abs(trend).toFixed(1).replace('.', ',') + '% vs bulan lalu');
+          if (s.have30 < s.count) parts.push(s.have30 + ' dari ' + s.count + ' produk');
+          if (s.est30n) parts.push(s.est30n + ' estimasi');
+          return parts.join(' · ');
+        };
         return [['Rentang Harga', s ? rangeTxt(s.priceMin, s.priceMax) : '–'],
-          [has30 ? 'Terjual 30 hari' : 'Terjual (sesuai tampilan)', s ? cnt(has30 ? s.sold30 : s.basisSold) + (has30 ? pctTxt(s.soldTrend) + (s.have30 < s.count ? ' · ' + s.have30 + '/' + s.count + ' produk' : '') + (s.est30n ? ' · ' + s.est30n + ' estimasi' : '') : '') : '–'],
-          [has30 ? 'Omset 30 hari' : 'Omset (sesuai tampilan)', s ? full(has30 ? s.omzet30 : s.basisOmzet) + (has30 ? pctTxt(s.omzetTrend) + (s.have30 < s.count ? ' · ' + s.have30 + '/' + s.count + ' produk' : '') + (s.est30n ? ' · ' + s.est30n + ' estimasi' : '') : '') : '–']];
+          [has30 ? 'Terjual 30 hari' : 'Terjual (sesuai tampilan)', s ? cnt(has30 ? s.sold30 : s.basisSold) : '–', s ? sub(s.soldTrend) : ''],
+          [has30 ? 'Omset 30 hari' : 'Omset (sesuai tampilan)', s ? full(has30 ? s.omzet30 : s.basisOmzet) : '–', s ? sub(s.omzetTrend) : '']];
       }
       return null;
     }
