@@ -1,5 +1,5 @@
 // Shofee - service worker: buka panel, lisensi (login Google, status berlangganan, checkout Midtrans).
-importScripts('src/config.js');
+importScripts('src/config.js', 'src/audit-bg.js');
 
 const CFG = self.SPILL_CONFIG;
 const FILES = ['src/parser.js', 'src/store.js', 'src/license.js', 'src/ui.js', 'src/inline.js', 'src/content.js'];
